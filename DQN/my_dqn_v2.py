@@ -231,7 +231,7 @@ def test(env, agent, optimizer, device, config):
 
 def set_game(env_id, agent_mode):
     config = CONFIG[env_id]
-    env = wrappers.make_env(env_id, config['with_graphics']) if config['is_atari'] else gym.make(env_id)
+    env = wrappers.make_env(env_id, config) if config['is_atari'] else gym.make(env_id)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     input_dims = env.observation_space.shape
     output_dim = env.action_space.n
@@ -251,8 +251,9 @@ CONFIG = {
         "random_base_line": True,
         "rewards_mean_length": 100,
         "is_atari": False,
+        "fire_reset": False,
         "max_frames": 1e5,
-        "learning_rate": 0.001,
+        "learning_rate": 1e-3,
         "epsilon_decay": 2 * 1e4,
         "batch_size": 32,
         "use_lag_agent": True,
@@ -262,14 +263,15 @@ CONFIG = {
         "id": "Cart",
         "agent_load_score": 46,
         "test_n_games": 10,
-        "with_graphics": True,
+        "with_graphics": False,
     },
     "PongNoFrameskip-v4": {
         "random_base_line": True,
         "rewards_mean_length": 100,
         "is_atari": True,
+        "fire_reset": True,
         "max_frames": 1e6,
-        "learning_rate": 0.0001,
+        "learning_rate":1e-4,
         "epsilon_decay": 2 * 1e5,
         "batch_size": 32,
         "use_lag_agent": True,
@@ -279,14 +281,15 @@ CONFIG = {
         "id": "Pong",
         "agent_load_score": 19,
         "test_n_games": 10,
-        "with_graphics": True,
+        "with_graphics": False,
     },
     "SpaceInvaders-v0": {
-        "random_base_line": True,
-        "rewards_mean_length": 500,
+        "random_base_line": False,
+        "rewards_mean_length": 100,
         "is_atari": True,
+        "fire_reset": True,
         "max_frames": 1e6,
-        "learning_rate": 0.0001,
+        "learning_rate": 1e-4,
         "epsilon_decay": 2 * 1e5,
         "batch_size": 32,
         "use_lag_agent": True,
@@ -296,12 +299,29 @@ CONFIG = {
         "id": "Space",
         "agent_load_score": 15,
         "test_n_games": 10,
-        "with_graphics": True,
+        "with_graphics": False,
+    },
+    "MsPacman-v0": {
+        "random_base_line": False,
+        "rewards_mean_length": 100,
+        "is_atari": True,
+        "fire_reset": False,
+        "max_frames": 1e6,
+        "learning_rate": 1e-4,
+        "epsilon_decay": 2 * 1e5,
+        "batch_size": 32,
+        "use_lag_agent": True,
+        "save_trained_agent": True,
+        "agent_saving_score_normalizer": 10,
+        "agent_saving_gain": 50,
+        "id": "Pac",
+        "agent_load_score": 15,
+        "test_n_games": 10,
+        "with_graphics": False,
     }
 }
 
-
 if __name__ == "__main__":
-    id_ = "SpaceInvaders-v0"
+    id_ = "MsPacman-v0"
     mode = "train"
     set_game(id_, mode)

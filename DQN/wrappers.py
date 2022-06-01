@@ -119,13 +119,11 @@ class BufferWrapper(gym.ObservationWrapper):
         return self.buffer
 
 
-def make_env(env_name, render):
-    if render:
-        env = gym.make(env_name, render_mode='human')
-    else:
-        env = gym.make(env_name)
+def make_env(env_name, config):
+    env = gym.make(env_name, render_mode='human') if config['with_graphics'] else gym.make(env_name)
     env = MaxAndSkipEnv(env)
-    env = FireResetEnv(env)
+    if config['fire_reset']:
+        env = FireResetEnv(env)
     env = ProcessFrame84(env)
     env = ImageToPyTorch(env)
     env = BufferWrapper(env, 4)

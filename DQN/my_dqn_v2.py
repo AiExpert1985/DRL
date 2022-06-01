@@ -26,9 +26,6 @@ class Agent(nn.Module):
             action = (torch.max(logits, dim=1)[1]).item()
         return action
 
-    def act_randomly(self):
-        return random.choice(range(self.n_actions))
-
 
 class FcAgent(Agent):
     def __init__(self, input_shape, n_actions, epsilon, exp_buffer, hidden_dim=128):
@@ -45,7 +42,6 @@ class FcAgent(Agent):
 
 
 class CnnAgent(Agent):
-    # noinspection PyTypeChecker
     def __init__(self, input_shape, n_actions, epsilon, exp_buffer, hidden_dim=512):
         super().__init__(n_actions, epsilon, exp_buffer)
         self.conv = nn.Sequential(
@@ -169,10 +165,7 @@ def train(env, agent, optimizer, device, config, agent_mode):
     saved_agent_reward = best_rewards_mean
     mean_length = config['rewards_mean_length']
     for frame in range(start_frame, int(config["max_frames"])):
-        if config['random_base_line']:
-            action = agent.act_randomly()
-        else:
-            action = agent.act(state, device)
+        action = agent.act(state, device)
         next_state, reward, done, _ = env.step(action)
         if not config['is_atari'] and config['with_graphics']:
             env.render()
@@ -249,7 +242,6 @@ def set_game(env_id, agent_mode):
 
 CONFIG = {
     "CartPole-v1": {
-        "random_base_line": True,
         "rewards_mean_length": 100,
         "is_atari": False,
         "fire_reset": False,
@@ -267,7 +259,6 @@ CONFIG = {
         "with_graphics": False,
     },
     "PongNoFrameskip-v4": {
-        "random_base_line": True,
         "rewards_mean_length": 100,
         "is_atari": True,
         "fire_reset": True,
@@ -285,7 +276,6 @@ CONFIG = {
         "with_graphics": False,
     },
     "SpaceInvaders-v0": {
-        "random_base_line": False,
         "rewards_mean_length": 100,
         "is_atari": True,
         "fire_reset": True,
@@ -303,13 +293,12 @@ CONFIG = {
         "with_graphics": False,
     },
     "MsPacman-v0": {
-        "random_base_line": False,
         "rewards_mean_length": 100,
         "is_atari": True,
         "fire_reset": False,
-        "max_frames": 1e6,
+        "max_frames": 2*1e6,
         "learning_rate": 1e-4,
-        "epsilon_decay": 2 * 1e5,
+        "epsilon_decay": 5 * 1e5,
         "batch_size": 32,
         "use_lag_agent": True,
         "save_trained_agent": True,

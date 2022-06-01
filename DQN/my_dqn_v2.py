@@ -191,6 +191,7 @@ def train(env, agent, optimizer, device, config, agent_mode):
             if rewards_mean > best_rewards_mean:
                 if config['save_trained_agent'] and (rewards_mean - saved_agent_reward) > config['agent_saving_gain']:
                     save_agent(frame, agent, optimizer, train_rewards[-mean_length:], config)
+                    saved_agent_reward = rewards_mean
                 best_rewards_mean = rewards_mean
         else:
             state = next_state

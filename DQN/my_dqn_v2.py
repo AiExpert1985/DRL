@@ -226,7 +226,10 @@ def test(env, agent, optimizer, device, config):
 def set_game(env_id, agent_mode):
     config = CONFIG[env_id]
     env = wrappers.make_env(env_id, config) if config['is_atari'] else gym.make(env_id)
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    if config['force_cpu']:
+        device = "cpu"
+    else:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
     input_dims = env.observation_space.shape
     output_dim = env.action_space.n
     epsilon = Epsilon(start=1.0, final=0.01, decay=config["epsilon_decay"])
@@ -257,6 +260,7 @@ CONFIG = {
         "agent_load_score": 46,
         "test_n_games": 10,
         "with_graphics": False,
+        "force_cpu": True,
     },
     "PongNoFrameskip-v4": {
         "rewards_mean_length": 100,
@@ -274,6 +278,7 @@ CONFIG = {
         "agent_load_score": 19,
         "test_n_games": 10,
         "with_graphics": False,
+        "force_cpu": True,
     },
     "SpaceInvaders-v0": {
         "rewards_mean_length": 100,
@@ -291,6 +296,7 @@ CONFIG = {
         "agent_load_score": 15,
         "test_n_games": 10,
         "with_graphics": False,
+        "force_cpu": True,
     },
     "MsPacman-v0": {
         "rewards_mean_length": 100,
@@ -305,9 +311,10 @@ CONFIG = {
         "agent_saving_score_normalizer": 10,
         "agent_saving_gain": 50,
         "id": "Pac",
-        "agent_load_score": 15,
+        "agent_load_score": 396,
         "test_n_games": 10,
-        "with_graphics": False,
+        "with_graphics": True,
+        "force_cpu": True,
     }
 }
 

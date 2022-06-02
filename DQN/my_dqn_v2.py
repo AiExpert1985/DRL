@@ -161,7 +161,7 @@ def train(env, agent, optimizer, device, config, agent_mode):
     writer = SummaryWriter(comment=tb_title)
     lag_agent = copy.deepcopy(agent) if config["use_lag_agent"] else agent
     state = env.reset()
-    episode_reward = 0
+    return_ = 0
     saved_agent_reward = best_rewards_mean
     mean_length = config['rewards_mean_length']
     for frame in range(start_frame, int(config["max_frames"])):
@@ -169,13 +169,13 @@ def train(env, agent, optimizer, device, config, agent_mode):
         next_state, reward, done, _ = env.step(action)
         if not config['is_atari'] and config['with_graphics']:
             env.render()
-        episode_reward += reward
+        return_ += reward
         experience = (torch.from_numpy(state), action, reward, torch.from_numpy(next_state), done)
         agent.exp_buffer.push(experience)
         if done:
             state = env.reset()
-            train_rewards.append(episode_reward)
-            episode_reward = 0
+            train_rewards.append(return_)
+            return_ = 0
             rewards_mean = np.mean(train_rewards[-mean_length:])
             print(f"{frame}: r = {train_rewards[-1]:.0f}, r_mean = {rewards_mean:.1f}, eps = {agent.epsilon.val:.2f}")
             writer.add_scalar("100_rewards_mean", rewards_mean, frame)
@@ -313,7 +313,7 @@ CONFIG = {
         "id": "Pac",
         "agent_load_score": 396,
         "test_n_games": 10,
-        "with_graphics": True,
+        "with_graphics": False,
         "force_cpu": True,
     }
 }

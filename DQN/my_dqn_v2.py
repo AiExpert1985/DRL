@@ -124,8 +124,7 @@ def calculate_loss(agent, lag_agent, device, gamma=0.99):
 def save_agent(prev_frame, agent, optimizer, rewards, config):
     best_rewards_mean = np.mean(rewards)
     print(f"--------------> Saving agent with score {int(best_rewards_mean)}")
-    agent_score = int(best_rewards_mean / config['agent_saving_score_normalizer'])
-    file_path = f"best_models/{config['id']}_{agent_score}.pth"
+    file_path = f"best_models/{config['id']}_{int(best_rewards_mean)}.pth"
     checkpoint = {'frame': prev_frame,
                   'agent_state_dict': agent.state_dict(),
                   'exp_buffer': agent.exp_buffer,
@@ -253,6 +252,7 @@ def set_game(env_id, agent_mode):
 
 CONFIG = {
     "CartPole-v1": {
+        "id": "Cart",
         "rewards_mean_length": 100,
         "is_atari": False,
         "fire_reset": False,
@@ -262,15 +262,14 @@ CONFIG = {
         "batch_size": 32,
         "use_lag_agent": True,
         "save_trained_agent": True,
-        "agent_saving_score_normalizer": 10,
         "agent_saving_gain": 30,
-        "id": "Cart",
         "agent_load_score": 46,
         "test_n_games": 10,
         "with_graphics": False,
         "force_cpu": False,
     },
     "PongNoFrameskip-v4": {
+        "id": "Pong",
         "rewards_mean_length": 100,
         "is_atari": True,
         "fire_reset": True,
@@ -280,15 +279,14 @@ CONFIG = {
         "batch_size": 32,
         "use_lag_agent": True,
         "save_trained_agent": True,
-        "agent_saving_score_normalizer": 1,
         "agent_saving_gain": 3,
-        "id": "Pong",
         "agent_load_score": 19,
         "test_n_games": 10,
         "with_graphics": False,
         "force_cpu": False,
     },
     "SpaceInvaders-v0": {
+        "id": "Space",
         "rewards_mean_length": 100,
         "is_atari": True,
         "fire_reset": True,
@@ -298,15 +296,14 @@ CONFIG = {
         "batch_size": 32,
         "use_lag_agent": True,
         "save_trained_agent": True,
-        "agent_saving_score_normalizer": 10,
         "agent_saving_gain": 50,
-        "id": "Space",
         "agent_load_score": 15,
         "test_n_games": 10,
         "with_graphics": False,
         "force_cpu": False,
     },
     "MsPacman-v0": {
+        "id": "Pac",
         "rewards_mean_length": 100,
         "is_atari": True,
         "fire_reset": False,
@@ -316,9 +313,7 @@ CONFIG = {
         "batch_size": 32,
         "use_lag_agent": True,
         "save_trained_agent": True,
-        "agent_saving_score_normalizer": 10,
         "agent_saving_gain": 250,
-        "id": "Pac",
         "agent_load_score": 396,
         "test_n_games": 10,
         "with_graphics": False,

@@ -7,6 +7,7 @@ import numpy as np
 from collections import deque
 import random
 import copy
+import time
 
 
 class Agent(nn.Module):
@@ -164,6 +165,8 @@ def train(env, agent, optimizer, device, config, agent_mode):
     return_ = 0
     saved_agent_reward = best_rewards_mean
     mean_length = config['rewards_mean_length']
+    prev_frame = start_frame
+    prev_time = time.time()
     for frame in range(start_frame, int(config["max_frames"])):
         action = agent.act(state, device)
         next_state, reward, done, _ = env.step(action)
@@ -177,10 +180,15 @@ def train(env, agent, optimizer, device, config, agent_mode):
             train_rewards.append(return_)
             return_ = 0
             rewards_mean = np.mean(train_rewards[-mean_length:])
-            print(f"{frame}: r = {train_rewards[-1]:.0f}, r_mean = {rewards_mean:.1f}, eps = {agent.epsilon.val:.2f}")
+            speed = (frame - prev_frame) / (time.time() - prev_time)
+            prev_frame = frame
+            prev_time = time.time()
+            print(f"{frame}: r = {train_rewards[-1]:.0f}, r_mean = {int(rewards_mean)}, "
+                  f"eps = {agent.epsilon.val:.2f}, speed = {int(speed)} f/s")
             writer.add_scalar("100_rewards_mean", rewards_mean, frame)
             writer.add_scalar("epsilon", agent.epsilon.val, frame)
             writer.add_scalar("episode_reward", train_rewards[-1], frame)
+            writer.add_scalar("speed", speed, frame)
             if rewards_mean > best_rewards_mean:
                 if config['save_trained_agent'] and (rewards_mean - saved_agent_reward) > config['agent_saving_gain']:
                     save_agent(frame, agent, optimizer, train_rewards[-mean_length:], config)
@@ -260,7 +268,7 @@ CONFIG = {
         "agent_load_score": 46,
         "test_n_games": 10,
         "with_graphics": False,
-        "force_cpu": True,
+        "force_cpu": False,
     },
     "PongNoFrameskip-v4": {
         "rewards_mean_length": 100,
@@ -278,7 +286,7 @@ CONFIG = {
         "agent_load_score": 19,
         "test_n_games": 10,
         "with_graphics": False,
-        "force_cpu": True,
+        "force_cpu": False,
     },
     "SpaceInvaders-v0": {
         "rewards_mean_length": 100,
@@ -296,7 +304,7 @@ CONFIG = {
         "agent_load_score": 15,
         "test_n_games": 10,
         "with_graphics": False,
-        "force_cpu": True,
+        "force_cpu": False,
     },
     "MsPacman-v0": {
         "rewards_mean_length": 100,
@@ -309,12 +317,12 @@ CONFIG = {
         "use_lag_agent": True,
         "save_trained_agent": True,
         "agent_saving_score_normalizer": 10,
-        "agent_saving_gain": 50,
+        "agent_saving_gain": 250,
         "id": "Pac",
         "agent_load_score": 396,
         "test_n_games": 10,
         "with_graphics": False,
-        "force_cpu": True,
+        "force_cpu": False,
     }
 }
 

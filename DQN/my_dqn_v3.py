@@ -9,7 +9,7 @@ from collections import deque
 import random
 import copy
 import time
-import my_config
+from my_config import get_config
 
 
 class Agent(nn.Module):
@@ -282,10 +282,8 @@ def set_game(env_id, agent_mode, config):
         test(env, agent, optimizer, device, config)
 
 
-# possible environments = ['CartPole-v1', 'PongNoFrameskip-v4', 'SpaceInvaders-v0', 'MsPacman-v0']
-
 if __name__ == "__main__":
-    id_ = "MsPacman-v0"
-    mode = "train"
-    game_config = my_config.get_config(id_)
+    id_ = "MsPacman-v0"                # 'CartPole-v1', 'PongNoFrameskip-v4', 'SpaceInvaders-v0', 'MsPacman-v0'
+    mode = "train"                     # 'train', 'test', 'resume'
+    game_config = get_config(id_)
     set_game(id_, mode, game_config)

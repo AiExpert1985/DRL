@@ -84,7 +84,7 @@ class Epsilon:
 
 
 class ExperienceBuffer:
-    def __init__(self, capacity=1000, sample_len=32):
+    def __init__(self, capacity=10000, sample_len=32):
         self.capacity = capacity
         self.buffer = deque(maxlen=self.capacity)
         self.sample_len = sample_len
@@ -202,7 +202,7 @@ def train(env, agent, optimizer, device, config, agent_mode):
         loss.backward()
         optimizer.step()
         agent.epsilon.update()
-        if config['use_lag_agent'] and frame % 1000 == 0:
+        if config['use_lag_agent'] and frame % config['lag_update_freq'] == 0:
             lag_agent.load_state_dict(agent.state_dict())
         writer.add_scalar("loss", loss.item(), frame)
     writer.flush()
@@ -239,8 +239,8 @@ def set_game(env_id, agent_mode):
         device = "cuda" if torch.cuda.is_available() else "cpu"
     input_dims = env.observation_space.shape
     output_dim = env.action_space.n
-    epsilon = Epsilon(start=1.0, final=0.01, decay=config["epsilon_decay"])
-    ex_buffer = ExperienceBuffer(capacity=10000, sample_len=config["batch_size"])
+    epsilon = Epsilon(start=1.0, final=config['epsilon_final'], decay=config["epsilon_decay"])
+    ex_buffer = ExperienceBuffer(capacity=int(config['buffer_size']), sample_len=config["batch_size"])
     AgentClass = CnnAgent if config['is_atari'] else FcAgent
     agent = AgentClass(input_dims, output_dim, epsilon, ex_buffer).to(device)
     optimizer = optim.Adam(params=agent.parameters(), lr=config['learning_rate'])
@@ -259,8 +259,11 @@ CONFIG = {
         "max_frames": 1e5,
         "learning_rate": 1e-3,
         "epsilon_decay": 2 * 1e4,
+        "epsilon_final": 0.1,
         "batch_size": 32,
+        "buffer_size": 10000,
         "use_lag_agent": True,
+        "lag_update_freq": 100,
         "save_trained_agent": True,
         "agent_saving_gain": 30,
         "agent_load_score": 46,
@@ -274,10 +277,13 @@ CONFIG = {
         "is_atari": True,
         "fire_reset": True,
         "max_frames": 1e6,
-        "learning_rate":1e-4,
+        "learning_rate": 1e-4,
         "epsilon_decay": 2 * 1e5,
+        "epsilon_final": 0.1,
         "batch_size": 32,
+        "buffer_size": 10000,
         "use_lag_agent": True,
+        "lag_update_freq": 10000,
         "save_trained_agent": True,
         "agent_saving_gain": 3,
         "agent_load_score": 19,
@@ -293,8 +299,11 @@ CONFIG = {
         "max_frames": 1e6,
         "learning_rate": 1e-4,
         "epsilon_decay": 2 * 1e5,
+        "epsilon_final": 0.1,
         "batch_size": 32,
+        "buffer_size": 10000,
         "use_lag_agent": True,
+        "lag_update_freq": 10000,
         "save_trained_agent": True,
         "agent_saving_gain": 50,
         "agent_load_score": 15,
@@ -307,14 +316,17 @@ CONFIG = {
         "rewards_mean_length": 100,
         "is_atari": True,
         "fire_reset": False,
-        "max_frames": 2*1e6,
+        "max_frames": 4*1e6,
         "learning_rate": 1e-4,
-        "epsilon_decay": 5 * 1e5,
-        "batch_size": 32,
+        "epsilon_decay": 2 * 1e5,
+        "epsilon_final": 0.1,
+        "batch_size": 64,
+        "buffer_size": 1e5,
         "use_lag_agent": True,
+        "lag_update_freq": 10000,
         "save_trained_agent": True,
         "agent_saving_gain": 250,
-        "agent_load_score": 396,
+        "agent_load_score": 3687,
         "test_n_games": 10,
         "with_graphics": False,
         "force_cpu": False,
@@ -323,5 +335,5 @@ CONFIG = {
 
 if __name__ == "__main__":
     id_ = "MsPacman-v0"
-    mode = "train"
+    mode = "resume"
     set_game(id_, mode)

@@ -9,6 +9,7 @@ from collections import deque
 import random
 import copy
 import time
+import my_config
 
 
 class Agent(nn.Module):
@@ -262,8 +263,7 @@ def select_act_strategy(config):
     return act_strategy
 
 
-def set_game(env_id, agent_mode):
-    config = CONFIG[env_id]
+def set_game(env_id, agent_mode, config):
     env = wrappers.make_env(env_id, config) if config['is_atari'] else gym.make(env_id)
     if config['force_cpu']:
         device = "cpu"
@@ -282,94 +282,10 @@ def set_game(env_id, agent_mode):
         test(env, agent, optimizer, device, config)
 
 
-CONFIG = {
-    "CartPole-v1": {
-        "id": "Cart",
-        "rewards_mean_length": 100,
-        "is_atari": False,
-        "fire_reset": False,
-        "max_frames": 1e5,
-        "learning_rate": 1e-3,
-        "act_strategy": "e_greedy",  # e_greedy or softmax
-        "epsilon_decay": 2 * 1e4,
-        "epsilon_final": 0.1,
-        "batch_size": 32,
-        "buffer_size": 10000,
-        "use_lag_agent": True,
-        "lag_update_freq": 100,
-        "save_trained_agent": True,
-        "agent_saving_gain": 30,
-        "agent_load_score": 46,
-        "test_n_games": 10,
-        "with_graphics": False,
-        "force_cpu": False,
-    },
-    "PongNoFrameskip-v4": {
-        "id": "Pong",
-        "rewards_mean_length": 100,
-        "is_atari": True,
-        "fire_reset": True,
-        "max_frames": 1e6,
-        "learning_rate": 1e-4,
-        "act_strategy": "e_greedy",  # e_greedy or softmax
-        "epsilon_decay": 2 * 1e5,
-        "epsilon_final": 0.1,
-        "batch_size": 32,
-        "buffer_size": 10000,
-        "use_lag_agent": True,
-        "lag_update_freq": 10000,
-        "save_trained_agent": True,
-        "agent_saving_gain": 3,
-        "agent_load_score": 19,
-        "test_n_games": 10,
-        "with_graphics": False,
-        "force_cpu": False,
-    },
-    "SpaceInvaders-v0": {
-        "id": "Space",
-        "rewards_mean_length": 100,
-        "is_atari": True,
-        "fire_reset": True,
-        "max_frames": 1e6,
-        "learning_rate": 1e-4,
-        "act_strategy": "e_greedy",  # e_greedy or softmax
-        "epsilon_decay": 2 * 1e5,
-        "epsilon_final": 0.1,
-        "batch_size": 32,
-        "buffer_size": 10000,
-        "use_lag_agent": True,
-        "lag_update_freq": 10000,
-        "save_trained_agent": True,
-        "agent_saving_gain": 50,
-        "agent_load_score": 15,
-        "test_n_games": 10,
-        "with_graphics": False,
-        "force_cpu": False,
-    },
-    "MsPacman-v0": {
-        "id": "Pac",
-        "rewards_mean_length": 100,
-        "is_atari": True,
-        "fire_reset": False,
-        "max_frames": 4*1e6,
-        "learning_rate": 1e-4,
-        "act_strategy": "softmax",  # e_greedy or softmax
-        "epsilon_decay": 2 * 1e5,
-        "epsilon_final": 0.1,
-        "batch_size": 64,
-        "buffer_size": 1e5,
-        "use_lag_agent": True,
-        "lag_update_freq": 10000,
-        "save_trained_agent": True,
-        "agent_saving_gain": 250,
-        "agent_load_score": 3417,
-        "test_n_games": 10,
-        "with_graphics": False,
-        "force_cpu": False,
-    }
-}
+# possible environments = ['CartPole-v1', 'PongNoFrameskip-v4', 'SpaceInvaders-v0', 'MsPacman-v0']
 
 if __name__ == "__main__":
     id_ = "MsPacman-v0"
     mode = "train"
-    set_game(id_, mode)
+    game_config = my_config.get_config(id_)
+    set_game(id_, mode, game_config)

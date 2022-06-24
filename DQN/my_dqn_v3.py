@@ -2,6 +2,7 @@ import gym
 import wrappers
 import torch
 from torch import nn, optim
+import torch.nn.functional as F
 from tensorboardX import SummaryWriter
 import numpy as np
 from collections import deque
@@ -11,40 +12,36 @@ import time
 
 
 class Agent(nn.Module):
-    def __init__(self, n_actions, epsilon, exp_buffer):
+    def __init__(self, device, n_actions, act_strategy, exp_buffer):
         super().__init__()
         self.n_actions = n_actions
-        self.epsilon = epsilon
+        self.act_strategy = act_strategy
         self.exp_buffer = exp_buffer
+        self.device = device
 
-    @torch.no_grad()
-    def act(self, state, device):
-        if random.random() < self.epsilon.val:
-            action = random.choice(range(self.n_actions))
-        else:
-            state = torch.from_numpy(state).unsqueeze(0).float().to(device)
-            logits = self.forward(state)
-            action = (torch.max(logits, dim=1)[1]).item()
-        return action
+    def act(self, state):
+        state = torch.from_numpy(state).unsqueeze(0).float().to(self.device)
+        return self.act_strategy.act(self, state)
 
 
 class FcAgent(Agent):
-    def __init__(self, input_shape, n_actions, epsilon, exp_buffer, hidden_dim=128):
-        super().__init__(n_actions, epsilon, exp_buffer)
+    def __init__(self, device, input_shape, n_actions, epsilon, exp_buffer, hidden_dim=128):
+        super().__init__(device, n_actions, epsilon, exp_buffer)
         fc_layers = [
             nn.Linear(input_shape[0], hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, self.n_actions)
         ]
         self.full_connected = nn.Sequential(*fc_layers)
+        self.to(self.device)
 
     def forward(self, x):
         return self.full_connected(x)
 
 
 class CnnAgent(Agent):
-    def __init__(self, input_shape, n_actions, epsilon, exp_buffer, hidden_dim=512):
-        super().__init__(n_actions, epsilon, exp_buffer)
+    def __init__(self, device, input_shape, n_actions, epsilon, exp_buffer, hidden_dim=512):
+        super().__init__(device, n_actions, epsilon, exp_buffer)
         self.conv = nn.Sequential(
             nn.Conv2d(input_shape[0], 32, kernel_size=8, stride=4),
             nn.ReLU(),
@@ -60,6 +57,7 @@ class CnnAgent(Agent):
             nn.ReLU(),
             nn.Linear(hidden_dim, n_actions)
         )
+        self.to(self.device)
 
     def _get_conv_out(self, shape):
         o = self.conv(torch.zeros(1, *shape))
@@ -70,7 +68,11 @@ class CnnAgent(Agent):
         return self.fc(conv_out)
 
 
-class Epsilon:
+class ActionStrategy:
+    def act(self, model, state):
+        raise NotImplementedError
+
+class EGreedyStrategy(ActionStrategy):
     def __init__(self, start=1.0, final=0.01, decay=500):
         self.start = start
         self.final = final
@@ -81,6 +83,26 @@ class Epsilon:
     def update(self):
         self.n_frames += 1
         self.val = max(self.final, (self.start - (self.n_frames / self.decay)))
+
+    @torch.no_grad()
+    def act(self, model, state):
+        if random.random() < self.val:
+            action = random.choice(range(model.n_actions))
+        else:
+            logits = model.forward(state)
+            action = (torch.max(logits, dim=1)[1]).item()
+        self.update()
+        return action
+
+
+class SoftMaxStrategy(ActionStrategy):
+    @torch.no_grad()
+    def act(self, model, state):
+        logits = model.forward(state)
+        probs = F.softmax(logits, dim=1).squeeze().cpu().numpy()
+        avail_actions = list(range(model.n_actions))
+        action = np.random.choice(avail_actions, p=probs)
+        return action
 
 
 class ExperienceBuffer:
@@ -128,7 +150,7 @@ def save_agent(prev_frame, agent, optimizer, rewards, config):
     checkpoint = {'frame': prev_frame,
                   'agent_state_dict': agent.state_dict(),
                   'exp_buffer': agent.exp_buffer,
-                  'epsilon': agent.epsilon,
+                  'act_strategy': agent.act_strategy,
                   'optimizer_state_dict': optimizer.state_dict(),
                   'rewards': rewards,
                   'best_reward_mean': best_rewards_mean,
@@ -142,7 +164,7 @@ def load_agent(agent, optimizer, config):
     start_frame = check_point['frame']
     agent.load_state_dict(check_point['agent_state_dict'])
     agent.exp_buffer = check_point['exp_buffer']
-    agent.epsilon = check_point['epsilon']
+    agent.act_strategy = check_point['act_strategy']
     optimizer.load_state_dict(check_point['optimizer_state_dict'])
     train_rewards = check_point['rewards']
     best_reward_mean = check_point['best_reward_mean']
@@ -156,7 +178,7 @@ def train(env, agent, optimizer, device, config, agent_mode):
     if agent_mode == "resume":
         start_frame, agent, optimizer, train_rewards, best_rewards_mean = load_agent(agent, optimizer, config)
         print("**************** Training Resumed ****************")
-    tb_title = f"-MyDQNv1_{config['id']}_lag={config['use_lag_agent']}_eps={config['epsilon_decay']: .0f}" \
+    tb_title = f"-MyDQNv1_{config['id']}_lag={config['use_lag_agent']}_stgy={config['act_strategy']: .0f}" \
                f"_lr={config['learning_rate']}_batch={config['batch_size']}"
     writer = SummaryWriter(comment=tb_title)
     lag_agent = copy.deepcopy(agent) if config["use_lag_agent"] else agent
@@ -167,7 +189,7 @@ def train(env, agent, optimizer, device, config, agent_mode):
     prev_frame = start_frame
     prev_time = time.time()
     for frame in range(start_frame, int(config["max_frames"])):
-        action = agent.act(state, device)
+        action = agent.act(state)
         next_state, reward, done, _ = env.step(action)
         if not config['is_atari'] and config['with_graphics']:
             env.render()
@@ -183,11 +205,12 @@ def train(env, agent, optimizer, device, config, agent_mode):
             prev_frame = frame
             prev_time = time.time()
             print(f"{frame}: r = {train_rewards[-1]:.0f}, r_mean = {int(rewards_mean)}, "
-                  f"eps = {agent.epsilon.val:.2f}, speed = {int(speed)} f/s")
+                  f"speed = {int(speed)} f/s")
             writer.add_scalar("100_rewards_mean", rewards_mean, frame)
-            writer.add_scalar("epsilon", agent.epsilon.val, frame)
             writer.add_scalar("episode_reward", train_rewards[-1], frame)
             writer.add_scalar("speed", speed, frame)
+            if config['act_strategy'] == 'e_greedy':
+                writer.add_scalar("epsilon", agent.act_strategy.val, frame)
             if rewards_mean > best_rewards_mean:
                 if config['save_trained_agent'] and (rewards_mean - saved_agent_reward) > config['agent_saving_gain']:
                     save_agent(frame, agent, optimizer, train_rewards[-mean_length:], config)
@@ -201,7 +224,6 @@ def train(env, agent, optimizer, device, config, agent_mode):
         loss = calculate_loss(agent, lag_agent, device)
         loss.backward()
         optimizer.step()
-        agent.epsilon.update()
         if config['use_lag_agent'] and frame % config['lag_update_freq'] == 0:
             lag_agent.load_state_dict(agent.state_dict())
         writer.add_scalar("loss", loss.item(), frame)
@@ -229,6 +251,16 @@ def test(env, agent, optimizer, device, config):
         test_rewards.append(episode_rewards)
         print(f"{i}: episode_reward = {episode_rewards: .0f}, mean_reward = {np.mean(test_rewards): .0f}")
 
+def select_act_strategy(config):
+    if config['act_strategy'] == 'e_greedy':
+        act_strategy = EGreedyStrategy(start=1.0, final=config['epsilon_final'], decay=config["epsilon_decay"])
+    elif config['act_strategy'] == 'softmax':
+        act_strategy = SoftMaxStrategy()
+    else:
+        print("action strategy is not correctly selected")
+        raise ValueError
+    return act_strategy
+
 
 def set_game(env_id, agent_mode):
     config = CONFIG[env_id]
@@ -239,10 +271,10 @@ def set_game(env_id, agent_mode):
         device = "cuda" if torch.cuda.is_available() else "cpu"
     input_dims = env.observation_space.shape
     output_dim = env.action_space.n
-    epsilon = Epsilon(start=1.0, final=config['epsilon_final'], decay=config["epsilon_decay"])
     ex_buffer = ExperienceBuffer(capacity=int(config['buffer_size']), sample_len=config["batch_size"])
     AgentClass = CnnAgent if config['is_atari'] else FcAgent
-    agent = AgentClass(input_dims, output_dim, epsilon, ex_buffer).to(device)
+    act_strategy = select_act_strategy(config)
+    agent = AgentClass(device, input_dims, output_dim, act_strategy, ex_buffer)
     optimizer = optim.Adam(params=agent.parameters(), lr=config['learning_rate'])
     if agent_mode == "train" or agent_mode == "resume":
         train(env, agent, optimizer, device, config, agent_mode)
@@ -258,6 +290,7 @@ CONFIG = {
         "fire_reset": False,
         "max_frames": 1e5,
         "learning_rate": 1e-3,
+        "act_strategy": "e_greedy",  # e_greedy or softmax
         "epsilon_decay": 2 * 1e4,
         "epsilon_final": 0.1,
         "batch_size": 32,
@@ -278,6 +311,7 @@ CONFIG = {
         "fire_reset": True,
         "max_frames": 1e6,
         "learning_rate": 1e-4,
+        "act_strategy": "e_greedy",  # e_greedy or softmax
         "epsilon_decay": 2 * 1e5,
         "epsilon_final": 0.1,
         "batch_size": 32,
@@ -298,6 +332,7 @@ CONFIG = {
         "fire_reset": True,
         "max_frames": 1e6,
         "learning_rate": 1e-4,
+        "act_strategy": "e_greedy",  # e_greedy or softmax
         "epsilon_decay": 2 * 1e5,
         "epsilon_final": 0.1,
         "batch_size": 32,
@@ -318,6 +353,7 @@ CONFIG = {
         "fire_reset": False,
         "max_frames": 4*1e6,
         "learning_rate": 1e-4,
+        "act_strategy": "softmax",  # e_greedy or softmax
         "epsilon_decay": 2 * 1e5,
         "epsilon_final": 0.1,
         "batch_size": 64,

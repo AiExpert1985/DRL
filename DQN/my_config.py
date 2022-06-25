@@ -101,7 +101,7 @@ CONFIG = {
         "lag_update_freq": 10000,
         "save_trained_agent": True,
         "agent_saving_gain": 250,
-        "agent_load_score": 390,
+        "agent_load_score": 509,
         "test_n_games": 10,
         "with_graphics": False,
         "force_cpu": False,

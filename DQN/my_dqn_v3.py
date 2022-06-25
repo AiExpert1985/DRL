@@ -144,11 +144,12 @@ def calculate_loss(agent, lag_agent, device, gamma=0.99):
     return loss
 
 
-def save_agent(prev_frame, agent, optimizer, rewards, config):
+def save_agent(train_duration, prev_frame, agent, optimizer, rewards, config):
     best_rewards_mean = np.mean(rewards)
     print(f"--------------> Saving agent with score {int(best_rewards_mean)}")
     file_path = f"best_models/{config['id']}_{int(best_rewards_mean)}.pth"
-    checkpoint = {'frame': prev_frame,
+    checkpoint = {'train_duration': train_duration,
+                  'frame': prev_frame,
                   'agent_state_dict': agent.state_dict(),
                   'act_strategy': agent.act_strategy,
                   'optimizer_state_dict': optimizer.state_dict(),
@@ -161,22 +162,26 @@ def save_agent(prev_frame, agent, optimizer, rewards, config):
 def load_agent(agent, optimizer, config):
     file_path = f"best_models/{config['id']}_{config['agent_load_score']}.pth"
     check_point = torch.load(file_path)
+    train_duration = check_point['train_duration']
     start_frame = check_point['frame']
     agent.load_state_dict(check_point['agent_state_dict'])
     agent.act_strategy = check_point['act_strategy']
     optimizer.load_state_dict(check_point['optimizer_state_dict'])
     train_rewards = check_point['rewards']
     best_reward_mean = check_point['best_reward_mean']
-    return start_frame, agent, optimizer, train_rewards, best_reward_mean
+    return train_duration, start_frame, agent, optimizer, train_rewards, best_reward_mean
 
 
 def train(env, agent, optimizer, device, config, agent_mode):
+    train_duration = 0
     train_rewards = []
     start_frame = 0
     best_rewards_mean = float('-inf')
     if agent_mode == "resume":
-        start_frame, agent, optimizer, train_rewards, best_rewards_mean = load_agent(agent, optimizer, config)
+        train_duration, start_frame, agent, optimizer, train_rewards, best_rewards_mean = \
+            load_agent(agent, optimizer, config)
         print("**************** Training Resumed ****************")
+        print(f"Total training time for the agent = {int(train_duration / 60)} minutes")
     tb_title = f"-MyDQNv3_{config['id']}_lag={config['use_lag_agent']}_stgy={config['act_strategy']}" \
                f"_lr={config['learning_rate']}_batch={config['batch_size']}"
     writer = SummaryWriter(comment=tb_title)
@@ -200,11 +205,15 @@ def train(env, agent, optimizer, device, config, agent_mode):
             train_rewards.append(return_)
             return_ = 0
             rewards_mean = np.mean(train_rewards[-mean_length:])
-            speed = (frame - prev_frame) / (time.time() - prev_time)
+            current_time = time.time()
+            episode_duration = current_time - prev_time
+            speed = (frame - prev_frame) / episode_duration
             prev_frame = frame
-            prev_time = time.time()
+            prev_time = current_time
+            train_duration += episode_duration
+            total_training_time = int(train_duration / 60)
             print(f"{frame}: r = {train_rewards[-1]:.0f}, r_mean = {int(rewards_mean)}, "
-                  f"speed = {int(speed)} f/s")
+                  f"speed = {int(speed)} f/s, training_duration = {total_training_time}")
             writer.add_scalar("100_rewards_mean", rewards_mean, frame)
             writer.add_scalar("episode_reward", train_rewards[-1], frame)
             writer.add_scalar("speed", speed, frame)
@@ -212,7 +221,7 @@ def train(env, agent, optimizer, device, config, agent_mode):
                 writer.add_scalar("epsilon", agent.act_strategy.val, frame)
             if rewards_mean > best_rewards_mean:
                 if config['save_trained_agent'] and (rewards_mean - saved_agent_reward) > config['agent_saving_gain']:
-                    save_agent(frame, agent, optimizer, train_rewards[-mean_length:], config)
+                    save_agent(train_duration, frame, agent, optimizer, train_rewards[-mean_length:], config)
                     saved_agent_reward = rewards_mean
                 best_rewards_mean = rewards_mean
         else:
@@ -231,7 +240,9 @@ def train(env, agent, optimizer, device, config, agent_mode):
 
 
 def test(env, agent, optimizer, device, config):
-    start_frame, agent, optimizer, train_rewards, best_rewards_mean = load_agent(agent, optimizer, config)
+    train_duration, start_frame, agent, optimizer, train_rewards, best_rewards_mean = \
+        load_agent(agent, optimizer, config)
+    print(f"Agent was trained for {train_duration} minutes, with score {config['agent_load_score']}")
     test_rewards = []
     for i in range(config['test_n_games']):
         state = env.reset()

@@ -150,7 +150,6 @@ def save_agent(prev_frame, agent, optimizer, rewards, config):
     file_path = f"best_models/{config['id']}_{int(best_rewards_mean)}.pth"
     checkpoint = {'frame': prev_frame,
                   'agent_state_dict': agent.state_dict(),
-                  'exp_buffer': agent.exp_buffer,
                   'act_strategy': agent.act_strategy,
                   'optimizer_state_dict': optimizer.state_dict(),
                   'rewards': rewards,
@@ -164,7 +163,6 @@ def load_agent(agent, optimizer, config):
     check_point = torch.load(file_path)
     start_frame = check_point['frame']
     agent.load_state_dict(check_point['agent_state_dict'])
-    agent.exp_buffer = check_point['exp_buffer']
     agent.act_strategy = check_point['act_strategy']
     optimizer.load_state_dict(check_point['optimizer_state_dict'])
     train_rewards = check_point['rewards']
@@ -175,11 +173,11 @@ def load_agent(agent, optimizer, config):
 def train(env, agent, optimizer, device, config, agent_mode):
     train_rewards = []
     start_frame = 0
-    best_rewards_mean = 1e-100  # assign very small number
+    best_rewards_mean = float('-inf')
     if agent_mode == "resume":
         start_frame, agent, optimizer, train_rewards, best_rewards_mean = load_agent(agent, optimizer, config)
         print("**************** Training Resumed ****************")
-    tb_title = f"-MyDQNv1_{config['id']}_lag={config['use_lag_agent']}_stgy={config['act_strategy']: .0f}" \
+    tb_title = f"-MyDQNv3_{config['id']}_lag={config['use_lag_agent']}_stgy={config['act_strategy']}" \
                f"_lr={config['learning_rate']}_batch={config['batch_size']}"
     writer = SummaryWriter(comment=tb_title)
     lag_agent = copy.deepcopy(agent) if config["use_lag_agent"] else agent

@@ -216,8 +216,6 @@ def train(env, agent, optimizer, device, config, agent_mode):
             writer.add_scalar("100_rewards_mean", rewards_mean, frame)
             writer.add_scalar("episode_reward", train_rewards[-1], frame)
             writer.add_scalar("speed", speed, frame)
-            if config['act_strategy'] == 'e_greedy':
-                writer.add_scalar("epsilon", agent.act_strategy.val, frame)
             if rewards_mean > best_rewards_mean:
                 if config['save_trained_agent'] and (rewards_mean - saved_agent_reward) > config['agent_saving_gain']:
                     save_agent(train_duration, frame, agent, optimizer, train_rewards[-mean_length:], config)

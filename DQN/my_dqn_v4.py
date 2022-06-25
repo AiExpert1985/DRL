@@ -121,7 +121,7 @@ class ExperienceBuffer:
         return states, actions, rewards, next_states, dones
 
     def ready(self):
-        return len(self) >= self.capacity / 1000
+        return len(self) >= self.capacity / 10
 
     def __len__(self):
         return len(self.buffer)
@@ -136,9 +136,8 @@ def calculate_loss(agent, lag_agent, use_ddqn=False, gamma=0.99):
     dones = torch.tensor(dones).bool().to(agent.device)
     with torch.no_grad():
         if use_ddqn:
-            Qs = lag_agent(next_states)
-            Q_online, idx = torch.max(agent(next_states), dim=1)
-            Q_target = torch.gather(Qs, index=idx.unsqueeze(1), dim=1).squeeze()
+            Q_online, max_idx = torch.max(agent(next_states), dim=1)
+            Q_target = torch.gather(lag_agent(next_states), index=max_idx.unsqueeze(1), dim=1).squeeze()
             Q = (Q_target + Q_online) / 2
         else:
             Qs = lag_agent(next_states)

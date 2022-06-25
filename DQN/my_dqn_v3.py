@@ -16,6 +16,7 @@ class Agent(nn.Module):
     def __init__(self, device, n_actions, act_strategy, exp_buffer):
         super().__init__()
         self.n_actions = n_actions
+        self.avail_actions = list(range(self.n_actions))
         self.act_strategy = act_strategy
         self.exp_buffer = exp_buffer
         self.device = device
@@ -101,8 +102,7 @@ class SoftMaxStrategy(ActionStrategy):
     def act(self, model, state):
         logits = model.forward(state)
         probs = F.softmax(logits, dim=1).squeeze().cpu().numpy()
-        avail_actions = list(range(model.n_actions))
-        action = np.random.choice(avail_actions, p=probs)
+        action = np.random.choice(model.avail_actions, p=probs)
         return action
 
 
@@ -211,9 +211,8 @@ def train(env, agent, optimizer, device, config, agent_mode):
             prev_frame = frame
             prev_time = current_time
             train_duration += episode_duration
-            total_training_time = int(train_duration / 60)
             print(f"{frame}: r = {train_rewards[-1]:.0f}, r_mean = {int(rewards_mean)}, "
-                  f"speed = {int(speed)} f/s, training_duration = {total_training_time}")
+                  f"speed = {int(speed)} f/s, training_duration = {int(train_duration / 60)}")
             writer.add_scalar("100_rewards_mean", rewards_mean, frame)
             writer.add_scalar("episode_reward", train_rewards[-1], frame)
             writer.add_scalar("speed", speed, frame)
@@ -242,7 +241,7 @@ def train(env, agent, optimizer, device, config, agent_mode):
 def test(env, agent, optimizer, device, config):
     train_duration, start_frame, agent, optimizer, train_rewards, best_rewards_mean = \
         load_agent(agent, optimizer, config)
-    print(f"Agent was trained for {train_duration} minutes, with score {config['agent_load_score']}")
+    print(f"Agent was trained for {int(train_duration/60)} minutes, with score {config['agent_load_score']}")
     test_rewards = []
     for i in range(config['test_n_games']):
         state = env.reset()

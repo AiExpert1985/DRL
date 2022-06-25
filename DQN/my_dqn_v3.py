@@ -212,7 +212,7 @@ def train(env, agent, optimizer, device, config, agent_mode):
             prev_time = current_time
             train_duration += episode_duration
             print(f"{frame}: r = {train_rewards[-1]:.0f}, r_mean = {int(rewards_mean)}, "
-                  f"speed = {int(speed)} f/s, training_duration = {int(train_duration / 60)}")
+                  f"speed = {int(speed)} f/s, train_time = {int(train_duration / 60)} min")
             writer.add_scalar("100_rewards_mean", rewards_mean, frame)
             writer.add_scalar("episode_reward", train_rewards[-1], frame)
             writer.add_scalar("speed", speed, frame)

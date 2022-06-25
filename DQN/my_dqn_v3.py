@@ -127,13 +127,13 @@ class ExperienceBuffer:
         return len(self.buffer)
 
 
-def calculate_loss(agent, lag_agent, device, gamma=0.99):
+def calculate_loss(agent, lag_agent, gamma=0.99):
     states, actions, rewards, next_states, dones = agent.exp_buffer.sample()
-    states = torch.stack(states).float().to(device)
-    actions = torch.tensor(actions).unsqueeze(1).long().to(device)
-    rewards = torch.tensor(rewards).float().to(device)
-    next_states = torch.stack(next_states).float().to(device)
-    dones = torch.tensor(dones).bool().to(device)
+    states = torch.stack(states).float().to(agent.device)
+    actions = torch.tensor(actions).unsqueeze(1).long().to(agent.device)
+    rewards = torch.tensor(rewards).float().to(agent.device)
+    next_states = torch.stack(next_states).float().to(agent.device)
+    dones = torch.tensor(dones).bool().to(agent.device)
     with torch.no_grad():
         Qs = lag_agent(next_states)
         Q = torch.max(Qs, dim=1)[0]
@@ -172,7 +172,7 @@ def load_agent(agent, optimizer, config):
     return train_duration, start_frame, agent, optimizer, train_rewards, best_reward_mean
 
 
-def train(env, agent, optimizer, device, config, agent_mode):
+def train(env, agent, optimizer, config, agent_mode):
     train_duration = 0
     train_rewards = []
     start_frame = 0
@@ -226,7 +226,7 @@ def train(env, agent, optimizer, device, config, agent_mode):
         if not agent.exp_buffer.ready():
             continue
         optimizer.zero_grad()
-        loss = calculate_loss(agent, lag_agent, device)
+        loss = calculate_loss(agent, lag_agent)
         loss.backward()
         optimizer.step()
         if config['use_lag_agent'] and frame % config['lag_update_freq'] == 0:
@@ -236,7 +236,7 @@ def train(env, agent, optimizer, device, config, agent_mode):
     writer.close()
 
 
-def test(env, agent, optimizer, device, config):
+def test(env, agent, optimizer, config):
     train_duration, start_frame, agent, optimizer, train_rewards, best_rewards_mean = \
         load_agent(agent, optimizer, config)
     print(f"Agent was trained for {int(train_duration/60)} minutes, with score {config['agent_load_score']}")
@@ -245,7 +245,7 @@ def test(env, agent, optimizer, device, config):
         state = env.reset()
         episode_rewards = 0
         while True:
-            state = torch.from_numpy(state).unsqueeze(0).float().to(device)
+            state = torch.from_numpy(state).unsqueeze(0).float().to(agent.device)
             Qs = agent(state)
             action = (torch.max(Qs, dim=1)[1]).item()
             next_state, reward, done, _ = env.step(action)
@@ -283,9 +283,9 @@ def set_game(env_id, agent_mode, config):
     agent = AgentClass(device, input_dims, output_dim, act_strategy, ex_buffer)
     optimizer = optim.Adam(params=agent.parameters(), lr=config['learning_rate'])
     if agent_mode == "train" or agent_mode == "resume":
-        train(env, agent, optimizer, device, config, agent_mode)
+        train(env, agent, optimizer, config, agent_mode)
     if agent_mode == "test":
-        test(env, agent, optimizer, device, config)
+        test(env, agent, optimizer, config)
 
 
 if __name__ == "__main__":

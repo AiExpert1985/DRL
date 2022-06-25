@@ -37,6 +37,8 @@
         whether or not to display the the game for human, values = [True, False]
     force_cpu: (bool)
         force using the CPU even if PC have a GPU, values = [True, False]
+    ddqn: (bool)
+        whether or not use Double DQN, values = [True, False]
 """
 
 
@@ -61,6 +63,7 @@ CONFIG = {
         "test_n_games": 10,
         "with_graphics": False,
         "force_cpu": False,
+        "ddqn": False,
     },
     "PongNoFrameskip-v4": {
         "id": "Pong",
@@ -82,6 +85,7 @@ CONFIG = {
         "test_n_games": 10,
         "with_graphics": False,
         "force_cpu": False,
+        "ddqn": False,
     },
     "SpaceInvaders-v0": {
         "id": "Space",
@@ -103,6 +107,7 @@ CONFIG = {
         "test_n_games": 10,
         "with_graphics": False,
         "force_cpu": False,
+        "ddqn": False,
     },
     "MsPacman-v0": {
         "id": "Pac",
@@ -124,6 +129,7 @@ CONFIG = {
         "test_n_games": 10,
         "with_graphics": False,
         "force_cpu": False,
+        "ddqn": True,
     }
 }
 

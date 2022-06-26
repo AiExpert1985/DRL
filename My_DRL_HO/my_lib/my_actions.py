@@ -30,3 +30,14 @@ class EpsilonGreedyActionSelector(ActionSelector):
         rand_actions = np.random.choice(n_actions, sum(mask))
         actions[mask] = rand_actions
         return actions
+
+
+class EpsilonTracker:
+    def __init__(self, selector, params):
+        self.selector = selector
+        self.params = params
+        self.frame(0)
+
+    def frame(self, frame_idx: int):
+        eps = self.params.epsilon_start - frame_idx / self.params.epsilon_frames
+        self.selector.epsilon = max(self.params.epsilon_final, eps)

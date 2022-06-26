@@ -72,7 +72,7 @@ CONFIG = {
         "fire_reset": True,
         "max_frames": 1e6,
         "learning_rate": 1e-4,
-        "act_strategy": "e_greedy",
+        "act_strategy": "softmax",
         "epsilon_decay": 1.5 * 1e5,
         "epsilon_final": 0.01,
         "batch_size": 32,

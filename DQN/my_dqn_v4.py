@@ -295,6 +295,6 @@ def set_game(env_id, agent_mode, config):
 
 if __name__ == "__main__":
     id_ = "PongNoFrameskip-v4"                # 'CartPole-v1', 'PongNoFrameskip-v4', 'SpaceInvaders-v0', 'MsPacman-v0'
-    mode = "train"                     # 'train', 'test', 'resume'
+    mode = "resume"                     # 'train', 'test', 'resume'
     game_config = get_config(id_)
     set_game(id_, mode, game_config)

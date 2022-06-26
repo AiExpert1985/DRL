@@ -121,7 +121,7 @@ class ExperienceBuffer:
         return states, actions, rewards, next_states, dones
 
     def ready(self):
-        return len(self) >= self.capacity / 10
+        return len(self) >= self.capacity
 
     def __len__(self):
         return len(self.buffer)
@@ -218,8 +218,8 @@ def train(env, agent, optimizer, config, agent_mode):
             train_duration += episode_duration
             print(f"{frame}: r = {train_rewards[-1]:.0f}, r_mean = {int(rewards_mean)}, "
                   f"speed = {int(speed)} f/s, train_time = {int(train_duration / 60)} min")
-            writer.add_scalar("100_rewards_mean", rewards_mean, frame)
-            writer.add_scalar("episode_reward", train_rewards[-1], frame)
+            writer.add_scalar("reward_100", rewards_mean, frame)
+            writer.add_scalar("reward", train_rewards[-1], frame)
             writer.add_scalar("speed", speed, frame)
             if rewards_mean > best_rewards_mean:
                 if config['save_trained_agent'] and (rewards_mean - saved_agent_reward) > config['agent_saving_gain']:
@@ -294,7 +294,7 @@ def set_game(env_id, agent_mode, config):
 
 
 if __name__ == "__main__":
-    id_ = "MsPacman-v0"                # 'CartPole-v1', 'PongNoFrameskip-v4', 'SpaceInvaders-v0', 'MsPacman-v0'
+    id_ = "PongNoFrameskip-v4"                # 'CartPole-v1', 'PongNoFrameskip-v4', 'SpaceInvaders-v0', 'MsPacman-v0'
     mode = "train"                     # 'train', 'test', 'resume'
     game_config = get_config(id_)
     set_game(id_, mode, game_config)

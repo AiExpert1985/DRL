@@ -17,7 +17,7 @@ from ignite.metrics import RunningAverage
 from ignite.contrib.handlers import tensorboard_logger as tb_logger
 
 import lib.dqn_extra
-from lib import common
+from lib import dqn_model, common
 
 NAME = "07_distrib"
 
@@ -262,4 +262,4 @@ if __name__ == "__main__":
                                       output_transform=lambda a: a)
     tb.attach(engine, log_handler=handler, event_name=ptan_ignite.PeriodEvents.ITERS_100_COMPLETED)
 
-    engine.train(common.batch_generator(buffer, params.replay_initial, params.batch_size))
+    engine.run(common.batch_generator(buffer, params.replay_initial, params.batch_size))

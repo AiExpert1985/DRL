@@ -83,7 +83,7 @@ if __name__ == "__main__":
     env.seed(common.SEED)
 
     net = dqn_extra.RainbowDQN(env.observation_space.shape,
-                               env.action_space.n).to(device)
+                        env.action_space.n).to(device)
 
     tgt_net = ptan.agent.TargetNet(net)
     selector = ptan.actions.ArgmaxActionSelector()
@@ -114,5 +114,5 @@ if __name__ == "__main__":
 
     engine = Engine(process_batch)
     common.setup_ignite(engine, params, exp_source, NAME)
-    engine.train(common.batch_generator(buffer, params.replay_initial,
-                                        params.batch_size))
+    engine.run(common.batch_generator(buffer, params.replay_initial,
+                                      params.batch_size))

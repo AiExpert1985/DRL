@@ -162,7 +162,7 @@ class LazyFrames(object):
         It exists purely to optimize memory usage which can be huge for DQN's 1M frames replay
         buffers.
         This object should only be converted to numpy array before being passed to the model.
-        You'd not belive how complex the previous solution was."""
+        You'd not believe how complex the previous solution was."""
         self._frames = frames
 
     def __array__(self, dtype=None):

@@ -60,4 +60,5 @@ if __name__ == "__main__":
 
     engine = Engine(process_batch)
     common.setup_ignite(engine, params, exp_source, NAME)
-    engine.train(common.batch_generator(buffer, params.replay_initial, params.batch_size))
+    engine.run(common.batch_generator(buffer, params.replay_initial,
+                                      params.batch_size))

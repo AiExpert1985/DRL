@@ -3,7 +3,7 @@ import numpy as np
 
 import lib.dqn_extra
 
-sys.path.append("/")
+sys.path.append("./")
 
 from lib import common
 

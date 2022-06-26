@@ -17,7 +17,7 @@ from ignite.metrics import RunningAverage
 from ignite.contrib.handlers import tensorboard_logger as tb_logger
 
 import lib.dqn_extra
-from lib import dqn_model, common
+from lib import common
 
 NAME = "07_distrib"
 

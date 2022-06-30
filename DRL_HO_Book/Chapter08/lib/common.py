@@ -147,8 +147,10 @@ def calc_values_of_states(states, net, device="cpu"):
     return np.mean(mean_vals)
 
 
-def setup_ignite(engine: Engine, params: SimpleNamespace,
-                 exp_source, run_name: str,
+def setup_ignite(engine: Engine,
+                 params: SimpleNamespace,
+                 exp_source,
+                 run_name: str,
                  extra_metrics: Iterable[str] = ()):
     # get rid of missing metrics warning
     warnings.simplefilter("ignore", category=UserWarning)

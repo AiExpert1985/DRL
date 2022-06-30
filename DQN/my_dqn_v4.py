@@ -138,7 +138,7 @@ def calculate_loss(agent, lag_agent, use_ddqn=False, gamma=0.99):
         if use_ddqn:
             Q_online, max_idx = torch.max(agent(next_states), dim=1)
             Q_target = torch.gather(lag_agent(next_states), index=max_idx.unsqueeze(1), dim=1).squeeze()
-            Q = (Q_target + Q_online) / 2
+            Q = Q_target
         else:
             Qs = lag_agent(next_states)
             Q = torch.max(Qs, dim=1)[0]
@@ -177,12 +177,12 @@ def load_agent(agent, optimizer, config):
     return train_duration, start_frame, agent, optimizer, train_rewards, best_reward_mean
 
 
-def train(env, agent, optimizer, config, agent_mode):
+def train(env, agent, optimizer, config):
     train_duration = 0
     train_rewards = []
     start_frame = 0
     best_rewards_mean = float('-inf')
-    if agent_mode == "resume":
+    if config['agent_mode'] == "resume":
         train_duration, start_frame, agent, optimizer, train_rewards, best_rewards_mean = \
             load_agent(agent, optimizer, config)
         print("**************** Training Resumed ****************")
@@ -231,7 +231,7 @@ def train(env, agent, optimizer, config, agent_mode):
         if not agent.exp_buffer.ready():
             continue
         optimizer.zero_grad()
-        loss = calculate_loss(agent, lag_agent, use_ddqn=config['ddqn'])
+        loss = calculate_loss(agent, lag_agent, use_ddqn=config['use_ddqn'])
         loss.backward()
         optimizer.step()
         if config['use_lag_agent'] and frame % config['lag_update_freq'] == 0:
@@ -274,7 +274,7 @@ def select_act_strategy(config):
     return act_strategy
 
 
-def set_game(env_id, agent_mode, config):
+def set_game(env_id, config):
     env = wrappers.make_env(env_id, config) if config['is_atari'] else gym.make(env_id)
     if config['force_cpu']:
         device = "cpu"
@@ -287,14 +287,25 @@ def set_game(env_id, agent_mode, config):
     act_strategy = select_act_strategy(config)
     agent = AgentClass(device, input_dims, output_dim, act_strategy, ex_buffer)
     optimizer = optim.Adam(params=agent.parameters(), lr=config['learning_rate'])
-    if agent_mode == "train" or agent_mode == "resume":
-        train(env, agent, optimizer, config, agent_mode)
-    if agent_mode == "test":
+    if config['agent_mode'] == "train" or config['agent_mode'] == "resume":
+        train(env, agent, optimizer, config)
+    if config['agent_mode'] == "test":
         test(env, agent, optimizer, config)
 
 
 if __name__ == "__main__":
     id_ = "PongNoFrameskip-v4"                # 'CartPole-v1', 'PongNoFrameskip-v4', 'SpaceInvaders-v0', 'MsPacman-v0'
-    mode = "test"                     # 'train', 'test', 'resume'
+
     game_config = get_config(id_)
-    set_game(id_, mode, game_config)
+    game_config["agent_mode"] = "train"       # 'train', 'test', 'resume'
+    game_config["with_graphics"] = False
+    game_config["force_cpu"] = False
+    game_config["use_ddqn"] = False
+    game_config["agent_load_score"] = 3610
+    game_config["test_n_games"] = 10
+    game_config["save_trained_agent"] = True
+    game_config["use_lag_agent"] = True
+    game_config["lag_update_freq"] = 1000
+    game_config["rewards_mean_length"] = 100
+
+    set_game(id_, game_config)

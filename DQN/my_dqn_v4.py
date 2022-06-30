@@ -294,18 +294,21 @@ def set_game(env_id, config):
 
 
 if __name__ == "__main__":
-    id_ = "PongNoFrameskip-v4"                # 'CartPole-v1', 'PongNoFrameskip-v4', 'SpaceInvaders-v0', 'MsPacman-v0'
+    # available environments are: 'CartPole-v1', 'PongNoFrameskip-v4', 'SpaceInvaders-v0', 'MsPacman-v0'
+    id_ = "PongNoFrameskip-v4"
 
     game_config = get_config(id_)
-    game_config["agent_mode"] = "train"       # 'train', 'test', 'resume'
-    game_config["with_graphics"] = False
-    game_config["force_cpu"] = False
+    game_config["agent_mode"] = "train"
     game_config["use_ddqn"] = False
+    game_config["use_lag_agent"] = True
+    game_config["with_graphics"] = False
+    game_config["lag_update_freq"] = 1000       # num of frames wait before synchronizing target with online
+    game_config["rewards_mean_length"] = 100    # used for running average
+    game_config["save_trained_agent"] = True
+
+    # only for test or resume mode:
     game_config["agent_load_score"] = 3610
     game_config["test_n_games"] = 10
-    game_config["save_trained_agent"] = True
-    game_config["use_lag_agent"] = True
-    game_config["lag_update_freq"] = 1000
-    game_config["rewards_mean_length"] = 100
+    game_config["force_cpu"] = False
 
     set_game(id_, game_config)

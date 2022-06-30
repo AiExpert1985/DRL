@@ -1,8 +1,6 @@
 """
     id:  (str)
         the id of the environment, usually first 3 letters, example value = Pac
-    rewards_mean_length: (int)
-        the number of rewards to use for running average, example value = 100
     is_atari: (bool)
         whether it is an atari-2600 game or not, value = [True, False]
     fire_reset: (bool)
@@ -21,24 +19,8 @@
         batch size used for training the agent, example value = 64
     buffer_size: (int)
         size used for experience buffer, example value = 1e5
-    use_lag_agent: (bool)
-        whether or not using target network, values = [True, False]
-    lag_update_freq: (int)
-        how often to update target network (when using target network), example value = 10000
-    save_trained_agent: (bool)
-        whether or not saving the trained model during training, values = [True, False]
     agent_saving_gain: (int)
         the least gain in average_rewards to achieve before saving agent, example value = 250
-    agent_load_score: (int)
-        the value of the saved model to be loaded in test or resume mode, example value = 3417,
-    test_n_games: (int)
-        for how many episodes to run the test mode, example value = 10
-    with_graphics: (bool)
-        whether or not to display the the game for human, values = [True, False]
-    force_cpu: (bool)
-        force using the CPU even if PC have a GPU, values = [True, False]
-    ddqn: (bool)
-        whether or not use Double DQN, values = [True, False]
 """
 
 
@@ -62,7 +44,7 @@ CONFIG = {
         "fire_reset": True,
         "max_frames": 1e6,
         "learning_rate": 1e-4,
-        "act_strategy": "softmax",
+        "act_strategy": "e_greedy",
         "epsilon_decay": 1.5 * 1e5,
         "epsilon_final": 0.01,
         "batch_size": 32,

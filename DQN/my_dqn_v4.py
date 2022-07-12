@@ -70,6 +70,42 @@ class CnnAgent(Agent):
         return self.fc(conv_out)
 
 
+class CnnAgentDueling(Agent):
+    def __init__(self, device, input_shape, n_actions, epsilon, exp_buffer, hidden_dim=512):
+        super().__init__(device, n_actions, epsilon, exp_buffer)
+        self.conv = nn.Sequential(
+            nn.Conv2d(input_shape[0], 32, kernel_size=8, stride=4),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1),
+            nn.ReLU()
+        )
+
+        conv_out_size = self._get_conv_out(input_shape)
+        self.value = nn.Sequential(
+            nn.Linear(conv_out_size, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, 1)
+        )
+        self.advantage = self.value = nn.Sequential(
+            nn.Linear(conv_out_size, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, n_actions)
+        )
+        self.to(self.device)
+
+    def _get_conv_out(self, shape):
+        o = self.conv(torch.zeros(1, *shape))
+        return int(np.prod(o.size()))
+
+    def forward(self, x):
+        conv_out = self.conv(x).view(x.size()[0], -1)
+        value = self.value(conv_out)
+        advantage = self.advantage(conv_out)
+        return value + advantage - advantage.mean()
+
+
 class ActionStrategy:
     def act(self, model, state):
         raise NotImplementedError
@@ -284,6 +320,10 @@ def set_game(env_id, config):
     output_dim = env.action_space.n
     ex_buffer = ExperienceBuffer(capacity=int(config['buffer_size']), sample_len=config["batch_size"])
     AgentClass = CnnAgent if config['is_atari'] else FcAgent
+    if config['is_atari']:
+        AgentClass = CnnAgent if not config['use_dueling'] else CnnAgentDueling
+    else:
+        AgentClass = FcAgent
     act_strategy = select_act_strategy(config)
     agent = AgentClass(device, input_dims, output_dim, act_strategy, ex_buffer)
     optimizer = optim.Adam(params=agent.parameters(), lr=config['learning_rate'])
@@ -295,22 +335,23 @@ def set_game(env_id, config):
 
 if __name__ == "__main__":
     # available environments are: 'CartPole-v1', 'PongNoFrameskip-v4', 'SpaceInvaders-v0', 'MsPacman-v0'
-    id_ = "MsPacman-v0"
+    id_ = "PongNoFrameskip-v4"
 
     game_config = get_config(id_)
 
-    game_config["agent_mode"] = "test"
-    game_config["with_graphics"] = True
+    game_config["agent_mode"] = "train"
+    game_config["with_graphics"] = False
     game_config["force_cpu"] = False
 
     game_config["use_ddqn"] = True
     game_config["use_lag_agent"] = True
+    game_config["use_dueling"] = True           # currently, work only for Atari (not for CartPole)
     game_config["lag_update_freq"] = 1000       # num of frames wait before synchronizing target with online
     game_config["rewards_mean_length"] = 100    # used for running average
     game_config["save_trained_agent"] = True
 
     # only for test or resume mode:
-    game_config["agent_load_score"] = 4383
+    game_config["agent_load_score"] = -16
     game_config["test_n_games"] = 10
 
     set_game(id_, game_config)

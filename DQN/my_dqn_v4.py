@@ -334,8 +334,9 @@ def set_game(env_id, config):
 
 
 if __name__ == "__main__":
-    # available environments are: 'CartPole-v1', 'PongNoFrameskip-v4', 'SpaceInvaders-v0', 'MsPacman-v0'
-    id_ = "PongNoFrameskip-v4"
+    # available environments are:
+    # 'CartPole-v1', 'PongNoFrameskip-v4', 'ALE/SpaceInvaders-v5', 'ALE/MsPacman-v5, 'ALE/Breakout-v5'
+    id_ = "ALE/Breakout-v5"
 
     game_config = get_config(id_)
 

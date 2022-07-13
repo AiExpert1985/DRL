@@ -51,7 +51,7 @@ CONFIG = {
         "buffer_size": 10000,
         "agent_saving_gain": 3,
     },
-    "SpaceInvaders-v0": {
+    "ALE/SpaceInvaders-v5": {
         "id": "Space",
         "is_atari": True,
         "fire_reset": True,
@@ -64,7 +64,7 @@ CONFIG = {
         "buffer_size": 10000,
         "agent_saving_gain": 50,
     },
-    "MsPacman-v0": {
+    "ALE/MsPacman-v5": {
         "id": "Pac",
         "is_atari": True,
         "fire_reset": False,
@@ -76,6 +76,19 @@ CONFIG = {
         "batch_size": 32,
         "buffer_size": 1e5,
         "agent_saving_gain": 250,
+    },
+    "ALE/Breakout-v5": {
+        "id": "Break",
+        "is_atari": True,
+        "fire_reset": False,
+        "max_frames": 4*1e6,
+        "learning_rate": 1e-4,
+        "act_strategy": "e_greedy",
+        "epsilon_decay": 2 * 1e5,
+        "epsilon_final": 0.1,
+        "batch_size": 32,
+        "buffer_size": 1e5,
+        "agent_saving_gain": 5,
     }
 }
 

@@ -66,12 +66,14 @@ def get_action(model, obs):
 def run_episode(env, model):
     obs = env.reset()
     traj = []
+    total_rewards = 0
     while True:
         action = get_action(model, obs)
         next_obs, reward, done, _ = env.step(action)
         traj.append((obs, action, reward, next_obs, done))
+        total_rewards += reward
         if done:
-            return traj
+            return traj, total_rewards
         obs = next_obs
 
 
@@ -109,25 +111,29 @@ def run():
 
     writer = SummaryWriter(comment="actor_critic")
 
-    n_epochs = 100
-    n_episodes_per_epoch = 10
+    n_epochs = 1000
+    n_episodes_per_epoch = 5
 
-    for i in range(n_epochs):
+    for frame in range(n_epochs):
         history = []
+        rewards = []
         for j in range(n_episodes_per_epoch):
-            traj = run_episode(env, model)
+            traj, reward = run_episode(env, model)
             history.extend(traj)
+            rewards.append(reward)
 
         batch = get_batch(history, device)
-        reward_mean = torch.mean(batch[2])
         loss = calculate_loss(batch, model)
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
 
-        writer.add_scalar("reward_mean", reward_mean, i)
+        reward_100 = np.mean(rewards[-100:])
+        writer.add_scalar("reward_100", reward_100, frame)
 
-        print(i)
+        print(frame, ':', reward_100)
+    writer.flush()
+    writer.close()
 
 
 if __name__ == "__main__":

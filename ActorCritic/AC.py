@@ -122,14 +122,14 @@ def run():
             traj, reward = run_episode(env, model)
             history.extend(traj)
             rewards.append(reward)
-
+        print(len(history))
         batch = get_batch(history, device)
         loss = calculate_loss(batch, model)
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
 
-        reward_100 = np.mean(rewards[-100:])
+        reward_100 = np.mean(rewards)
         writer.add_scalar("reward_100", reward_100, frame)
 
         print(frame, ':', reward_100)

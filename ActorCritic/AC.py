@@ -95,7 +95,7 @@ def calculate_loss(batch, model):
         V_prime = model(next_obervs)[1]
         V_prime[dones] = 0
     actor_loss = - torch.mean(torch.log(action_probs) * (rewards + V_prime - V.detach()))
-    critic_loss = torch.mean(torch.square(rewards + V_prime - V))
+    critic_loss = nn.MSELoss()(rewards + V_prime, V)
     return actor_loss + critic_loss
 
 
@@ -109,7 +109,7 @@ def run():
     model = ActorCritic(state_space_size, action_space_size).to(device)
     optimizer = torch.optim.Adam(params=model.parameters(), lr=0.001)
 
-    writer = SummaryWriter(comment="actor_critic")
+    writer = SummaryWriter(comment="-actor_critic")
 
     n_epochs = 1000
     n_episodes_per_epoch = 5

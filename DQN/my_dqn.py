@@ -341,7 +341,7 @@ if __name__ == "__main__":
     game_config = get_config(id_)
 
     game_config["agent_mode"] = "train"
-    game_config["with_graphics"] = False
+    game_config["with_graphics"] = True
     game_config["force_cpu"] = False
 
     game_config["use_ddqn"] = True
@@ -352,7 +352,7 @@ if __name__ == "__main__":
     game_config["save_trained_agent"] = True
 
     # only for test or resume mode:
-    game_config["agent_load_score"] = -16
+    game_config["agent_load_score"] = 12
     game_config["test_n_games"] = 10
 
     set_game(id_, game_config)

@@ -113,7 +113,7 @@ def run():
     writer = SummaryWriter(comment="-actor_critic")
 
     n_epochs = 1000
-    n_episodes_per_epoch = 5
+    n_episodes_per_epoch = 3
 
     for frame in range(n_epochs):
         history = []

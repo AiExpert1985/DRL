@@ -13,7 +13,6 @@ class ActorCritic(nn.Module):
     def __init__(self, input_shape, n_actions):
         super(ActorCritic, self).__init__()
 
-        self.input_shape = input_shape
         self.n_actions = n_actions
         self.avail_actions = list(range(n_actions))
 
@@ -26,7 +25,7 @@ class ActorCritic(nn.Module):
             nn.ReLU()
         )
 
-        cnn_out_len = self.get_cnn_out_size()
+        cnn_out_len = self.get_cnn_out_size(input_shape)
 
         self.actor = nn.Sequential(
             nn.Linear(cnn_out_len, 512),
@@ -40,8 +39,8 @@ class ActorCritic(nn.Module):
             nn.Linear(512, 1)
         )
 
-    def get_cnn_out_size(self):
-        dummy_input = self.conv(torch.zeros(1, *self.input_shape))
+    def get_cnn_out_size(self, shape):
+        dummy_input = self.conv(torch.zeros(1, *shape))
         return torch.numel(dummy_input)
 
     def forward(self, x):

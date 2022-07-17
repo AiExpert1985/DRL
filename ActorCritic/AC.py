@@ -87,15 +87,16 @@ def get_batch(history, device):
     return observs, actions, rewards, next_observs, dones
 
 
-def calculate_loss(batch, model):
+def calculate_loss(batch, model, gamma=0.99):
     observs, actions, rewards, next_obervs, dones = batch
-    actor, V = model(observs)
+    actor, V_pred = model(observs)
     action_probs = torch.gather(actor, dim=1, index=actions).squeeze()
     with torch.no_grad():
         V_prime = model(next_obervs)[1]
         V_prime[dones] = 0
-    actor_loss = - torch.mean(torch.log(action_probs) * (rewards + V_prime - V.detach()))
-    critic_loss = nn.MSELoss()(rewards + V_prime, V)
+    V = rewards + gamma * V_prime
+    actor_loss = - torch.mean(torch.log(action_probs) * (V_pred.detach() - V))
+    critic_loss = nn.MSELoss()(V_pred, V)
     return actor_loss + critic_loss
 
 

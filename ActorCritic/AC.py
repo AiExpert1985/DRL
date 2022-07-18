@@ -1,6 +1,6 @@
 # actor-critic
 # start: 2022-7-16
-# last update: 2022-7-16
+# last update: 2022-7-17
 
 import wrappers
 import torch
@@ -54,8 +54,8 @@ class ActorCritic(nn.Module):
         return actor, critic
 
 
-def get_action(model, obs):
-    obs = torch.from_numpy(obs).float().unsqueeze(0)
+def get_action(model, obs, device):
+    obs = torch.from_numpy(obs).float().unsqueeze(0).to(device)
     with torch.no_grad():
         actor, critic = model(obs)
         probs = actor.squeeze().cpu().numpy()
@@ -63,40 +63,26 @@ def get_action(model, obs):
     return action
 
 
-def run_episode(env, model):
-    obs = env.reset()
-    traj = []
-    total_rewards = 0
-    while True:
-        action = get_action(model, obs)
-        next_obs, reward, done, _ = env.step(action)
-        traj.append((obs, action, reward, next_obs, done))
-        total_rewards += reward
-        if done:
-            return traj, total_rewards
-        obs = next_obs
-
-
 def get_batch(history, device):
     observs, actions, rewards, next_observs, dones = zip(*history)
     observs = torch.from_numpy(np.stack(observs)).float().to(device)
-    actions = torch.tensor(actions).unsqueeze(1).long()
-    rewards = torch.tensor(rewards).unsqueeze(1).float()
+    actions = torch.tensor(actions).unsqueeze(1).long().to(device)
+    rewards = torch.tensor(rewards).unsqueeze(1).float().to(device)
     next_observs = torch.from_numpy(np.stack(next_observs)).float().to(device)
-    dones = torch.tensor(dones).unsqueeze(1).bool()
+    dones = torch.tensor(dones).unsqueeze(1).bool().to(device)
     return observs, actions, rewards, next_observs, dones
 
 
-def calculate_loss(batch, model, gamma=0.99):
+def calculate_loss(batch, model, gamma=0.98):
     observs, actions, rewards, next_obervs, dones = batch
     actor, V_pred = model(observs)
     action_probs = torch.gather(actor, dim=1, index=actions).squeeze()
     with torch.no_grad():
         V_prime = model(next_obervs)[1]
         V_prime[dones] = 0
-    V = rewards + gamma * V_prime
-    actor_loss = - torch.mean(torch.log(action_probs) * (V_pred.detach() - V))
-    critic_loss = nn.MSELoss()(V_pred, V)
+    V_target = rewards + gamma * V_prime
+    actor_loss = - torch.mean(torch.log(action_probs) * (V_pred.detach() - V_target))
+    critic_loss = nn.MSELoss()(V_pred, V_target)
     return actor_loss + critic_loss
 
 
@@ -108,31 +94,38 @@ def run():
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = ActorCritic(state_space_size, action_space_size).to(device)
-    optimizer = torch.optim.Adam(params=model.parameters(), lr=0.001)
+    optimizer = torch.optim.Adam(params=model.parameters(), lr=0.0001)
 
     writer = SummaryWriter(comment="-actor_critic")
 
-    n_epochs = 1000
-    n_episodes_per_epoch = 3
+    max_frames = 1000000
+    batch_size = 256
 
-    for frame in range(n_epochs):
-        history = []
-        rewards = []
-        for j in range(n_episodes_per_epoch):
-            traj, reward = run_episode(env, model)
-            history.extend(traj)
-            rewards.append(reward)
-        print(len(history))
+    history = []
+    rewards = []
+    episode_reward = 0.0
+    obs = env.reset()
+    for frame in range(max_frames):
+        action = get_action(model, obs, device)
+        next_obs, reward, done, _ = env.step(action)
+        episode_reward += reward
+        history.append((obs, action, reward, next_obs, done))
+        obs = next_obs
+        if done:
+            rewards.append(episode_reward)
+            episode_reward = 0.0
+            obs = env.reset()
+        if len(history) < batch_size:
+            continue
+        reward_100 = np.mean(rewards[-100:])
         batch = get_batch(history, device)
         loss = calculate_loss(batch, model)
+        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        optimizer.zero_grad()
-
-        reward_100 = np.mean(rewards)
         writer.add_scalar("reward_100", reward_100, frame)
-
-        print(frame, ':', reward_100)
+        print(f'{frame}: {reward_100: .1f}')
+        history = []
     writer.flush()
     writer.close()
 

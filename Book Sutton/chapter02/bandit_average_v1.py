@@ -11,7 +11,7 @@ class Bandit:
     def reset(self):
         self.q_true = np.random.randn(self.k)
         self.q_estimated = np.zeros(self.k)
-        self.action_counts = np.zeros(self.k)
+        self.action_count = np.zeros(self.k)
         self.best_action = np.argmax(self.q_true)
         self.t = 0
 
@@ -24,9 +24,9 @@ class Bandit:
 
     def step(self, action):
         self.t += 1
-        self.action_counts[action] += 1
+        self.action_count[action] += 1
         reward = np.random.randn() + self.q_true[action]
-        self.q_estimated[action] += (reward - self.q_estimated[action]) / self.action_counts[action]
+        self.q_estimated[action] += (reward - self.q_estimated[action]) / self.action_count[action]
         return reward
 
 

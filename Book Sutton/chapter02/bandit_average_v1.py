@@ -18,7 +18,9 @@ class Bandit:
     def act(self):
         if np.random.randn() < self.epsilon:
             return np.random.choice(np.arange(self.k))
-        return np.argmax(self.q_estimated)
+        # if more than one state has similar value, choose one of them randomly
+        q_best = np.max(self.q_estimated)
+        return np.random.choice(np.where(self.q_estimated == q_best)[0])
 
     def step(self, action):
         self.t += 1

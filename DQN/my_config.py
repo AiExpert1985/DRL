@@ -80,7 +80,7 @@ CONFIG = {
     "ALE/Breakout-v5": {
         "id": "Break",
         "is_atari": True,
-        "fire_reset": False,
+        "fire_reset": True,
         "max_frames": 4*1e6,
         "learning_rate": 1e-4,
         "act_strategy": "e_greedy",

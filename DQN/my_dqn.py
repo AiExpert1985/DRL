@@ -340,7 +340,7 @@ if __name__ == "__main__":
 
     game_config = get_config(id_)
 
-    game_config["agent_mode"] = "train"
+    game_config["agent_mode"] = "test"
     game_config["with_graphics"] = True
     game_config["force_cpu"] = False
 

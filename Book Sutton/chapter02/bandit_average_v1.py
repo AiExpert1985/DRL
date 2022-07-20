@@ -64,7 +64,7 @@ def fig_2_4():
     for e, a in zip(epsilons, best_actions):
         plt.plot(a, label=e)
     plt.xlabel("time")
-    plt.ylabel("rewards mean")
+    plt.ylabel("optimal action %")
     plt.legend()
     plt.show()
     # plt.savefig('../images/fig_2_2.png')

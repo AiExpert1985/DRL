@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from tqdm import tqdm
 from tensorboardX import SummaryWriter
 
 
@@ -34,13 +33,8 @@ def run():
     bandit_10.reset()
     for i in range(1000000):
         action = bandit_10.act()
-        bandit_10.step(action)
-        diff = np.sum(np.abs(bandit_10.q_estimated-bandit_10.q_true)) / k_arms
-        if i % 100000 == 0:
-            print(f'{i}: {diff: .3f}')
-            writer.add_scalar('diff', diff, i)
-
-    print([(a, b) for (a, b) in zip(bandit_10.q_estimated, bandit_10.q_true)])
+        reward = bandit_10.step(action)
+        writer.add_scalar('reward', reard, i)
 
 
 if __name__ == '__main__':

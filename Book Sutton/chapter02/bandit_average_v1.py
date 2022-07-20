@@ -34,7 +34,7 @@ def run():
     for i in range(1000000):
         action = bandit_10.act()
         reward = bandit_10.step(action)
-        writer.add_scalar('reward', reard, i)
+        writer.add_scalar('reward', reward, i)
 
 
 if __name__ == '__main__':

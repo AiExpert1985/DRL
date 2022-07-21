@@ -1,6 +1,9 @@
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
+
+matplotlib.use('Agg')
 
 
 class Bandit:
@@ -16,7 +19,7 @@ class Bandit:
         self.t = 0
 
     def act(self):
-        if np.random.randn() < self.epsilon:
+        if np.random.rand() < self.epsilon:
             return np.random.choice(np.arange(self.k))
         # if more than one state has similar value, choose one of them randomly
         q_best = np.max(self.q_estimated)
@@ -30,11 +33,10 @@ class Bandit:
         return reward
 
 
-def run(epsilons, runs, time):
-    rewards = np.zeros((len(epsilons), runs, time))
-    is_best_actions = np.zeros(rewards.shape)
-    for i, e in enumerate(epsilons):
-        bandit = Bandit(k_arms=10, epsilon=e)
+def simulate(bandits, runs, time):
+    rewards = np.zeros((len(bandits), runs, time))
+    best_action_counts = np.zeros(rewards.shape)
+    for i, bandit in enumerate(bandits):
         for r in tqdm(range(runs)):
             bandit.reset()
             for t in range(time):
@@ -42,17 +44,16 @@ def run(epsilons, runs, time):
                 reward = bandit.step(action)
                 rewards[i, r, t] = reward
                 if action == bandit.best_action:
-                    is_best_actions[i, r, t] = 1
-    reward_results = np.mean(rewards, axis=1)
-    best_action_results = np.mean(is_best_actions, axis=1)
-    return reward_results, best_action_results
+                    best_action_counts[i, r, t] = 1
+    mean_rewards = np.mean(rewards, axis=1)
+    mean_best_action_counts = np.mean(best_action_counts, axis=1)
+    return mean_best_action_counts, mean_rewards
 
 
-def fig_2_4():
+def fig_2_2():
     epsilons = [0.0, 0.01, 0.1]
-    runs = 2000
-    time = 1000
-    rewards, best_actions = run(epsilons, runs, time)
+    bandits = [Bandit(k_arms=10, epsilon=e) for e in epsilons]
+    best_action_counts, rewards = simulate(bandits, runs=2000, time=1000)
     plt.figure(figsize=(10, 20))
     plt.subplot(2, 1, 1)
     for e, rew in zip(epsilons, rewards):
@@ -61,15 +62,14 @@ def fig_2_4():
     plt.ylabel("rewards mean")
     plt.legend()
     plt.subplot(2, 1, 2)
-    for e, a in zip(epsilons, best_actions):
+    for e, a in zip(epsilons, best_action_counts):
         plt.plot(a, label=e)
     plt.xlabel("time")
-    plt.ylabel("optimal action %")
+    plt.ylabel("% optimal action")
     plt.legend()
-    plt.show()
-    # plt.savefig('../images/fig_2_2.png')
+    plt.savefig('../images/fig_2_2.png')
 
 
 if __name__ == '__main__':
-    fig_2_4()
+    fig_2_2()
 

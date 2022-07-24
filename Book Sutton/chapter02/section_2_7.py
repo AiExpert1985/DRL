@@ -8,20 +8,23 @@ matplotlib.use('Agg')
 
 # noinspection PyAttributeOutsideInit
 class Bandit:
-    def __init__(self, k_arms, epsilon, is_optimistic, alpha):
+    def __init__(self, k_arms, epsilon, is_ucb, alpha):
         self.k = k_arms
         self.epsilon = epsilon
-        self.is_optimistic = is_optimistic
+        self.is_ucb = is_ucb
         self.alpha = alpha
 
     def reset(self):
         self.q_true = np.random.randn(self.k)
-        self.q_estimated = np.zeros(self.k) if not self.is_optimistic else np.ones(self.k) * 5.0
+        self.q_estimated = np.zeros(self.k)
         self.action_count = np.zeros(self.k)
         self.best_action = np.argmax(self.q_true)
         self.t = 0
 
     def act(self):
+        if self.is_ucb:
+            ucb = self.q_estimated + 2.0 * np.sqrt(np.log(self.t + 1)/(self.action_count + 1e-5))
+            return np.argmax(ucb)
         if np.random.rand() < self.epsilon:
             return np.random.choice(np.arange(self.k))
         # if more than one state has similar value, choose one of them randomly
@@ -54,24 +57,23 @@ def simulate(bandits, runs, time):
 
 
 def fig_2_2():
-    epsilons = [0.1, 0.0]
-    is_optimistic = [False, True]
-    bandits = [Bandit(k_arms=10, epsilon=e, is_optimistic=o, alpha=0.1) for e, o in zip(epsilons, is_optimistic)]
+    is_ucb = [False, True]
+    bandits = [Bandit(k_arms=10, epsilon=0.1, is_ucb=u, alpha=0.1) for u in is_ucb]
     best_action_counts, rewards = simulate(bandits, runs=2000, time=1000)
     plt.figure(figsize=(10, 20))
     plt.subplot(2, 1, 1)
-    for e, rew in zip(epsilons, rewards):
+    for e, rew in zip(is_ucb, rewards):
         plt.plot(rew, label=e)
     plt.xlabel("time")
     plt.ylabel("rewards mean")
     plt.legend()
     plt.subplot(2, 1, 2)
-    for e, a in zip(epsilons, best_action_counts):
+    for e, a in zip(is_ucb, best_action_counts):
         plt.plot(a, label=e)
     plt.xlabel("time")
     plt.ylabel("% optimal action")
     plt.legend()
-    plt.savefig('../images/fig_2_6.png')
+    plt.savefig('../images/fig_2_7.png')
 
 
 if __name__ == '__main__':

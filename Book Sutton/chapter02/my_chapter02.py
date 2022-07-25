@@ -58,20 +58,20 @@ def sec_2_3():
     epsilons = [0.0, 0.01, 0.1]
     bandits = [Bandit(epsilon=epsilon, is_sample_avg=True) for epsilon in epsilons]
     rewards, best_actions = run_simulation(bandits)
-    plt.figure(figsize=(20, 12))
+    plt.figure(figsize=(10, 20))
     plt.subplot(2, 1, 1)
     for epsilon, reward in zip(epsilons, rewards):
-        plt.plot(reward)
+        plt.plot(reward, label=epsilon)
         plt.xlabel('time')
         plt.ylabel('rewards')
         plt.legend()
     plt.subplot(2, 1, 2)
     for epsilon, best_action in zip(epsilons, best_actions):
-        plt.plot(best_action)
+        plt.plot(best_action, label=epsilon)
         plt.xlabel('time')
         plt.ylabel('% best actions')
         plt.legend()
-    plt.savefig('../images/figure_2_2.png')
+    plt.savefig('../images/sec_2_3.png')
 
 
 if __name__ == '__main__':

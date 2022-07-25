@@ -50,11 +50,10 @@ def run_simulation(bandits, runs=2000, time=1000):
         for r in tqdm(np.arange(runs)):
             bandit.reset()
             for t in np.arange(time):
-                action = bandit.act()
+                action, is_best_action = bandit.act()
+                best_actions[b, r, t] = is_best_action
                 reward = bandit.step(action)
                 rewards[b, r, t] = reward
-                if action == np.argmax(bandit.q_true):
-                    best_actions[b, r, t] = 1
     rewards = np.mean(rewards, axis=1)
     best_actions = np.mean(best_actions, axis=1)
     return rewards, best_actions

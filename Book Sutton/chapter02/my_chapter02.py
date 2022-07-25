@@ -4,8 +4,8 @@ from tqdm import tqdm
 
 
 class Bandit:
-    def __init__(self, arms=10, epsilon=0.0, lr=0.1, is_sample_avg=False,
-                 is_ucb=False, is_grad=False, is_optim=False, is_station=True):
+    def __init__(self, arms=10, epsilon=0.0, lr=0.1, is_sample_avg=False, is_ucb=False,
+                 is_grad=False, is_optim=False, is_station=True):
         self.arms = arms
         self.actions = np.arange(self.arms)
         self.epsilon = epsilon
@@ -23,14 +23,20 @@ class Bandit:
         self.action_counts = np.zeros(self.arms)
 
     def act(self):
+        best_true_q = np.max(self.q_true)
+        best_estimated_q = np.max(self.q_estimated)
         if np.random.rand() < self.epsilon:
-            return np.random.choice(self.actions)
-        best_q = np.max(self.q_estimated)
-        return np.random.choice(np.where(self.q_estimated == best_q)[0])
+            action = np.random.choice(self.actions)
+        else:
+            action = np.random.choice(np.where(self.q_estimated == best_estimated_q)[0])
+        self.action_counts[action] += 1
+        is_best_action = self.q_true[action] == best_true_q
+        return action, is_best_action
 
     def step(self, action):
         self.t += 1
         reward = self.q_true[action] + np.random.randn()
+        self.action_counts[action] += 1
         if self.is_sample_avg:
             self.lr = 1 / self.t
         self.q_estimated[action] += self.lr * (reward - self.q_estimated[action])

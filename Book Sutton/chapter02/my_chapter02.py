@@ -102,15 +102,15 @@ def exercise_2_5(runs=1000, time=10000):
     plt.subplot(2, 1, 1)
     for r, l in zip(rewards, labels):
         plt.plot(r, label=l)
-    plt.xlabel('reward')
-    plt.ylabel('time')
+    plt.xlabel('time')
+    plt.ylabel('reward')
     plt.legend()
 
     plt.subplot(2, 1, 2)
-    for p, l in zip(rewards, labels):
+    for p, l in zip(best_actions, labels):
         plt.plot(p, label=l)
-    plt.xlabel('% optimal action')
-    plt.ylabel('time')
+    plt.xlabel('time')
+    plt.ylabel('% optimal action')
     plt.legend()
 
     plt.savefig('../images/ex_2_5')

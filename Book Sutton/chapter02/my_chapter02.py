@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 
 class Bandit:
-    def __init__(self, arms=10, epsilon=0., step_size=0.1, q_true_initial=0., q_estimated_initial=0.,
+    def __init__(self, arms=10, epsilon=0., step_size=0.1, q_estimated_initial=0.,
                  is_sample_avg=False, is_ucb=False, is_grad=False, is_stationary=True):
         self.arms = arms
         self.actions = np.arange(self.arms)
@@ -14,14 +14,13 @@ class Bandit:
         self.is_ucb = is_ucb
         self.is_grad = is_grad
         self.is_stationary = is_stationary
-        self.q_true_initial = q_true_initial
         self.q_estimated_initial = q_estimated_initial
 
     def reset(self):
         if self.is_stationary:
             self.q_true = np.random.randn(self.arms)
         else:
-            self.q_true = np.zeros(self.arms) + self.q_true_initial
+            self.q_true = np.zeros(self.arms)
         self.q_estimated = np.zeros(self.arms) + self.q_estimated_initial
         self.action_counts = np.zeros(self.arms)
         self.t = 0
@@ -98,7 +97,7 @@ def exercise_2_5():
     is_sample_average = [True, False]
     bandits = [Bandit(epsilon=0.1, step_size=0.1, is_stationary=False, is_sample_avg=is_avg)
                for is_avg in is_sample_average]
-    rewards, best_actions = run_simulation(bandits, runs=2000, time=10000)
+    rewards, best_actions = run_simulation(bandits, runs=200, time=1000)
 
     plt.figure(figsize=(10, 20))
     plt.subplot(2, 1, 1)
@@ -148,4 +147,4 @@ def section_2_6():
 
 
 if __name__ == '__main__':
-    section_2_6()
+    exercise_2_5()

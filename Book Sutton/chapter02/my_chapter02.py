@@ -96,9 +96,9 @@ def section_2_3():
 
 def exercise_2_5():
     is_sample_average = [True, False]
-    bandits = [Bandit(arms=20, epsilon=0.1, lr=0.1, is_stationary=False, is_sample_avg=is_avg)
+    bandits = [Bandit(epsilon=0.1, lr=0.1, is_stationary=False, is_sample_avg=is_avg)
                for is_avg in is_sample_average]
-    rewards, best_actions = run_simulation(bandits, runs=1000, time=1000)
+    rewards, best_actions = run_simulation(bandits, runs=2000, time=10000)
 
     plt.figure(figsize=(10, 20))
     plt.subplot(2, 1, 1)

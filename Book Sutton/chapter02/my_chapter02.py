@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 
 class Bandit:
-    def __init__(self, arms=10, epsilon=0.0, lr=0.1, q_true_initial=0., q_estimated_initial=0.,
+    def __init__(self, arms=10, epsilon=0., lr=0.1, q_true_initial=0., q_estimated_initial=0.,
                  is_sample_avg=False, is_ucb=False, is_grad=False, is_stationary=True):
         self.arms = arms
         self.actions = np.arange(self.arms)

@@ -4,12 +4,12 @@ from tqdm import tqdm
 
 
 class Bandit:
-    def __init__(self, arms=10, epsilon=0., lr=0.1, q_true_initial=0., q_estimated_initial=0.,
+    def __init__(self, arms=10, epsilon=0., step_size=0.1, q_true_initial=0., q_estimated_initial=0.,
                  is_sample_avg=False, is_ucb=False, is_grad=False, is_stationary=True):
         self.arms = arms
         self.actions = np.arange(self.arms)
         self.epsilon = epsilon
-        self.lr = lr
+        self.step_size = step_size
         self.is_sample_avg = is_sample_avg
         self.is_ucb = is_ucb
         self.is_grad = is_grad
@@ -28,7 +28,6 @@ class Bandit:
 
     def act(self):
         best_true_q = np.max(self.q_true)
-        best_estimated_q = np.max(self.q_estimated)
         if self.is_ucb:
             action = 1
         elif self.is_grad:
@@ -37,6 +36,7 @@ class Bandit:
             if np.random.rand() < self.epsilon:
                 action = np.random.choice(self.actions)
             else:
+                best_estimated_q = np.max(self.q_estimated)
                 action = np.random.choice(np.where(self.q_estimated == best_estimated_q)[0])
         self.action_counts[action] += 1
         is_best_action = self.q_true[action] == best_true_q
@@ -49,8 +49,8 @@ class Bandit:
         reward = self.q_true[action] + np.random.randn()
         self.action_counts[action] += 1
         if self.is_sample_avg:
-            self.lr = 1 / self.action_counts[action]
-        self.q_estimated[action] += self.lr * (reward - self.q_estimated[action])
+            self.step_size = 1 / self.action_counts[action]
+        self.q_estimated[action] += self.step_size * (reward - self.q_estimated[action])
         return reward
 
 
@@ -96,7 +96,7 @@ def section_2_3():
 
 def exercise_2_5():
     is_sample_average = [True, False]
-    bandits = [Bandit(epsilon=0.1, lr=0.1, is_stationary=False, is_sample_avg=is_avg)
+    bandits = [Bandit(epsilon=0.1, step_size=0.1, is_stationary=False, is_sample_avg=is_avg)
                for is_avg in is_sample_average]
     rewards, best_actions = run_simulation(bandits, runs=2000, time=10000)
 
@@ -120,5 +120,32 @@ def exercise_2_5():
     plt.savefig('../images/ex_2_5')
 
 
+def section_2_6():
+    epsilons = [0., 0.1]
+    q_inits = [5., 0.]
+    bandits = [Bandit(epsilon=epsilon, q_estimated_initial=init)
+               for epsilon, init in zip(epsilons, q_inits)]
+    rewards, best_actions = run_simulation(bandits, runs=1000, time=1000)
+
+    plt.figure(figsize=(10, 20))
+    labels = ['optimistic', 'Realistic']
+    plt.subplot(2, 1, 1)
+
+    for r, l in zip(rewards, labels):
+        plt.plot(r, label=l)
+        plt.xlabel('time')
+        plt.ylabel('rewards')
+        plt.legend()
+    plt.subplot(2, 1, 2)
+
+    for a, l in zip(best_actions, labels):
+        plt.plot(a, label=l)
+        plt.xlabel('time')
+        plt.ylabel('% best actions')
+        plt.legend()
+
+    plt.savefig('../images/sec_2_6.png')
+
+
 if __name__ == '__main__':
-    exercise_2_5()
+    section_2_6()

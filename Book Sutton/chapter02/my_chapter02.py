@@ -55,9 +55,9 @@ class Bandit:
             mask = np.zeros(self.arms)
             mask[action] = 1
             if self.gradient_baseline:
-                self.q_estimated += self.step_size * (reward - self.reward_mean) * (mask * self.policy)
+                self.q_estimated += self.step_size * (reward - self.reward_mean) * (mask - self.policy)
             else:
-                self.q_estimated += self.step_size * reward * (mask * self.policy)
+                self.q_estimated += self.step_size * reward * (mask - self.policy)
         else:
             self.q_estimated[action] += self.step_size * (reward - self.q_estimated[action])
         if self.is_nonstationary:
@@ -182,7 +182,6 @@ def section_2_7(runs=1000, time=1000):
 
 
 def section_2_8(runs=1000, time=1000):
-    step_sizes = [0.1, 0.4]
     bandits = [Bandit(step_size=0.1, is_gradient=True, gradient_baseline=True),
                Bandit(step_size=0.1, is_gradient=True, gradient_baseline=False),
                Bandit(step_size=0.4, is_gradient=True, gradient_baseline=True),
@@ -214,4 +213,4 @@ def section_2_8(runs=1000, time=1000):
 
 
 if __name__ == '__main__':
-    section_2_8(runs=100)
+    section_2_8()

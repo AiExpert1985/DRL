@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 
 class Bandit:
-    def __init__(self, arms=10, epsilon=0., step_size=0.1, q_estimated_initial=0.,
+    def __init__(self, arms=10, epsilon=0., step_size=0.1, q_estimated_initial=0., gradient_baseline=True,
                  is_sample_avg=False, ucb_param=None, is_gradient=False, is_nonstationary=False):
         self.arms = arms
         self.actions = np.arange(self.arms)
@@ -15,11 +15,13 @@ class Bandit:
         self.is_gradient = is_gradient
         self.is_nonstationary = is_nonstationary
         self.q_estimated_initial = q_estimated_initial
+        self.gradient_baseline = gradient_baseline
 
     def reset(self):
         self.q_true = np.zeros(self.arms) if self.is_nonstationary else np.random.randn(self.arms)
         self.q_estimated = np.zeros(self.arms) + self.q_estimated_initial
         self.action_counts = np.zeros(self.arms)
+        self.reward_mean = 0
         self.t = 0
 
     def act(self):
@@ -30,7 +32,9 @@ class Bandit:
             max_val = np.max(ucb)
             action = np.random.choice(np.where(ucb == max_val)[0])
         elif self.is_gradient:
-            action = 1
+            exp_q_est = np.exp(self.q_estimated)
+            self.policy = exp_q_est / np.sum(exp_q_est)
+            action = np.random.choice(self.actions, p=self.policy)
         else:
             if np.random.rand() < self.epsilon:
                 action = np.random.choice(self.actions)
@@ -47,9 +51,18 @@ class Bandit:
         self.action_counts[action] += 1
         if self.is_sample_avg:
             self.step_size = 1 / self.action_counts[action]
-        self.q_estimated[action] += self.step_size * (reward - self.q_estimated[action])
+        if self.is_gradient:
+            mask = np.zeros(self.arms)
+            mask[action] = 1
+            if self.gradient_baseline:
+                self.q_estimated += self.step_size * (reward - self.reward_mean) * (mask * self.policy)
+            else:
+                self.q_estimated += self.step_size * reward * (mask * self.policy)
+        else:
+            self.q_estimated[action] += self.step_size * (reward - self.q_estimated[action])
         if self.is_nonstationary:
             self.q_true += np.random.normal(0, 0.01, self.arms)
+        self.reward_mean += (reward - self.reward_mean) / self.t
         return reward
 
 
@@ -168,5 +181,37 @@ def section_2_7(runs=1000, time=1000):
     plt.savefig('../images/sec_2_7.png')
 
 
+def section_2_8(runs=1000, time=1000):
+    step_sizes = [0.1, 0.4]
+    bandits = [Bandit(step_size=0.1, is_gradient=True, gradient_baseline=True),
+               Bandit(step_size=0.1, is_gradient=True, gradient_baseline=False),
+               Bandit(step_size=0.4, is_gradient=True, gradient_baseline=True),
+               Bandit(step_size=0.4, is_gradient=True, gradient_baseline=False),
+               ]
+    rewards, best_actions = run_simulation(bandits, runs=runs, time=time)
+
+    plt.figure(figsize=(10, 20))
+    labels = ['alpha=0.1 with baseline',
+              'alpha=0.1 without baseline',
+              'alpha=0.4 with baseline',
+              'alpha=0.4 without baseline', ]
+
+    plt.subplot(2, 1, 1)
+    for r, l in zip(rewards, labels):
+        plt.plot(r, label=l)
+        plt.xlabel('time')
+        plt.ylabel('rewards')
+        plt.legend()
+
+    plt.subplot(2, 1, 2)
+    for a, l in zip(best_actions, labels):
+        plt.plot(a, label=l)
+        plt.xlabel('time')
+        plt.ylabel('% best actions')
+        plt.legend()
+
+    plt.savefig('../images/sec_2_8.png')
+
+
 if __name__ == '__main__':
-    section_2_7()
+    section_2_8(runs=100)

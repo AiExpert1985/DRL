@@ -211,5 +211,38 @@ def section_2_8(runs=1000, time=1000):
     plt.savefig('../images/sec_2_8.png')
 
 
+def section_2_10(runs=1000, time=1000):
+    generators = [
+        lambda epsilon: Bandit(epsilon=epsilon, is_sample_avg=True),
+        lambda initial: Bandit(epsilon=0, q_estimated_initial=initial, step_size=0.1),
+        lambda coef: Bandit(epsilon=0, ucb_param=coef, is_sample_avg=True),
+        lambda alpha: Bandit(is_gradient=True, step_size=alpha, gradient_baseline=True)
+    ]
+    parameters = [np.arange(-7, -1, dtype=np.float),
+                  np.arange(-5, 2, dtype=np.float),
+                  np.arange(-4, 3, dtype=np.float),
+                  np.arange(-2, 3, dtype=np.float)]
+    rewards = []
+    for params, g in zip(parameters, generators):
+        bandits = [g(2**x) for x in params]
+        r, _ = run_simulation(bandits, runs, time)
+        rewards.append(np.mean(r, axis=1))
+
+    labels = ['e-greedy', 'optimistic', 'ucb', 'gradient']
+
+    for r, l in zip(rewards, labels):
+        plt.plot(r, label=l)
+        plt.xlabel('time')
+        plt.ylabel('rewards')
+        plt.legend()
+
+    plt.savefig('../images/sec_2_10.png')
+
+
 if __name__ == '__main__':
-    section_2_8()
+    # section_2_3(runs=100)
+    # exercise_2_5(runs=100)
+    # section_2_6(runs=100)
+    # section_2_7(runs=100)
+    # section_2_8(runs=100)
+    section_2_10(runs=100)

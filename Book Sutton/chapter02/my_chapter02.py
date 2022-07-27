@@ -228,12 +228,12 @@ def section_2_10(runs=1000, time=1000):
         bandits = [g(i) for i in inputs]
         r, _ = run_simulation(bandits, runs, time)
         rewards.append(np.mean(r, axis=1))
-    print(rewards)
 
     labels = ['e-greedy', 'optimistic', 'ucb', 'gradient']
 
     for r, l, p in zip(rewards, labels, parameters):
         plt.plot(p, r, label=l)
+        plt.xscale('log', base=2)
         plt.xlabel('params')
         plt.ylabel('rewards')
         plt.legend()
@@ -247,4 +247,4 @@ if __name__ == '__main__':
     # section_2_6()
     # section_2_7()
     # section_2_8()
-    section_2_10()
+    section_2_10(runs=2000)

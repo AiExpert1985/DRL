@@ -5,13 +5,13 @@ from tqdm import tqdm
 
 class Bandit:
     def __init__(self, arms=10, epsilon=0., step_size=0.1, q_estimated_initial=0.,
-                 is_sample_avg=False, is_ucb=False, is_gradient=False, is_nonstationary=False):
+                 is_sample_avg=False, ucb_param=None, is_gradient=False, is_nonstationary=False):
         self.arms = arms
         self.actions = np.arange(self.arms)
         self.epsilon = epsilon
         self.step_size = step_size
         self.is_sample_avg = is_sample_avg
-        self.is_ucb = is_ucb
+        self.ucb_param = ucb_param
         self.is_gradient = is_gradient
         self.is_nonstationary = is_nonstationary
         self.q_estimated_initial = q_estimated_initial
@@ -24,8 +24,11 @@ class Bandit:
 
     def act(self):
         best_true_q = np.max(self.q_true)
-        if self.is_ucb:
-            action = 1
+        if self.ucb_param is not None:
+            ucb = self.q_estimated + \
+                  self.ucb_param * np.sqrt(np.log(self.t+1)/(self.action_counts + 0.00001))
+            max_val = np.max(ucb)
+            action = np.random.choice(np.where(ucb == max_val)[0])
         elif self.is_gradient:
             action = 1
         else:
@@ -91,9 +94,8 @@ def section_2_3(runs=1000, time=1000):
 
 
 def exercise_2_5(runs=1000, time=10000):
-    is_sample_average = [True, False]
-    bandits = [Bandit(epsilon=0.1, step_size=0.1, is_nonstationary=True, is_sample_avg=is_avg)
-               for is_avg in is_sample_average]
+    bandits = [Bandit(epsilon=0.1, is_nonstationary=True, is_sample_avg=True, step_size=0.1),
+               Bandit(epsilon=0.1, is_nonstationary=True, is_sample_avg=False)]
     rewards, best_actions = run_simulation(bandits, runs=runs, time=time)
 
     plt.figure(figsize=(10, 20))
@@ -117,10 +119,8 @@ def exercise_2_5(runs=1000, time=10000):
 
 
 def section_2_6(runs=1000, time=1000):
-    epsilons = [0., 0.1]
-    q_inits = [5., 0.]
-    bandits = [Bandit(epsilon=epsilon, q_estimated_initial=init)
-               for epsilon, init in zip(epsilons, q_inits)]
+    bandits = [Bandit(epsilon=0., q_estimated_initial=5.),
+               Bandit(epsilon=0.1, q_estimated_initial=0.)]
     rewards, best_actions = run_simulation(bandits, runs=runs, time=time)
 
     plt.figure(figsize=(10, 20))
@@ -143,5 +143,30 @@ def section_2_6(runs=1000, time=1000):
     plt.savefig('../images/sec_2_6.png')
 
 
+def section_2_7(runs=1000, time=1000):
+    bandits = [Bandit(epsilon=0., is_sample_avg=True, ucb_param=2.),
+               Bandit(epsilon=.1, is_sample_avg=True)]
+    rewards, best_actions = run_simulation(bandits, runs=runs, time=time)
+
+    plt.figure(figsize=(10, 20))
+    labels = ['ucb', 'e-greedy']
+
+    plt.subplot(2, 1, 1)
+    for r, l in zip(rewards, labels):
+        plt.plot(r, label=l)
+        plt.xlabel('time')
+        plt.ylabel('rewards')
+        plt.legend()
+
+    plt.subplot(2, 1, 2)
+    for a, l in zip(best_actions, labels):
+        plt.plot(a, label=l)
+        plt.xlabel('time')
+        plt.ylabel('% best actions')
+        plt.legend()
+
+    plt.savefig('../images/sec_2_7.png')
+
+
 if __name__ == '__main__':
-    exercise_2_5(runs=1000)
+    section_2_7()

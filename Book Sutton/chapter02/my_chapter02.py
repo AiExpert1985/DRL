@@ -218,10 +218,10 @@ def section_2_10(runs=1000, time=1000):
         lambda coef: Bandit(epsilon=0, ucb_param=coef, is_sample_avg=True),
         lambda alpha: Bandit(is_gradient=True, step_size=alpha, gradient_baseline=True)
     ]
-    parameters = [[round(2**x, 3) for x in np.arange(-7, -1, dtype=np.float)],
-                  [round(2**x, 3) for x in np.arange(-5, 2, dtype=np.float)],
-                  [round(2**x, 3) for x in np.arange(-4, 3, dtype=np.float)],
-                  [round(2**x, 3) for x in np.arange(-2, 3, dtype=np.float)]]
+    parameters = [[round(2**x, 3) for x in np.arange(-7.0, -1.0)],
+                  [round(2**x, 3) for x in np.arange(-5.0, 2.0)],
+                  [round(2**x, 3) for x in np.arange(-4.0, 3.0)],
+                  [round(2**x, 3) for x in np.arange(-2.0, 3.0)]]
 
     rewards = []
     for inputs, g in zip(parameters, generators):
@@ -241,10 +241,42 @@ def section_2_10(runs=1000, time=1000):
     plt.savefig('../images/sec_2_10.png')
 
 
+def exercise_2_11(runs=1000, time=10000):
+    generators = [
+        lambda epsilon: Bandit(epsilon=epsilon, step_size=0.1, is_sample_avg=False, is_nonstationary=True),
+        lambda initial: Bandit(epsilon=0, q_estimated_initial=initial, step_size=0.1, is_nonstationary=True),
+        lambda coef: Bandit(epsilon=0, ucb_param=coef, is_sample_avg=True, is_nonstationary=True),
+        lambda alpha: Bandit(is_gradient=True, step_size=alpha, gradient_baseline=True, is_nonstationary=True)
+    ]
+    parameters = [[round(2**x, 3) for x in np.arange(-7.0, -1.0)],
+                  [round(2**x, 3) for x in np.arange(-5.0, 2.0)],
+                  [round(2**x, 3) for x in np.arange(-4.0, 3.0)],
+                  [round(2**x, 3) for x in np.arange(-2.0, 3.0)]]
+
+    rewards = []
+    for inputs, g in zip(parameters, generators):
+        bandits = [g(i) for i in inputs]
+        r, _ = run_simulation(bandits, runs, time)
+        r = r[:, int(r.shape[1]/2):]  # consider only last half of rewards
+        rewards.append(np.mean(r, axis=1))
+
+    labels = ['e-greedy', 'optimistic', 'ucb', 'gradient']
+
+    for r, l, p in zip(rewards, labels, parameters):
+        plt.plot(p, r, label=l)
+        plt.xscale('log', base=2)
+        plt.xlabel('params')
+        plt.ylabel('rewards')
+        plt.legend()
+
+    plt.savefig('../images/ex_2_11.png')
+
+
 if __name__ == '__main__':
-    # section_2_3()
-    # exercise_2_5()
-    # section_2_6()
-    # section_2_7()
-    # section_2_8()
-    section_2_10(runs=2000)
+    section_2_3()
+    exercise_2_5()
+    section_2_6()
+    section_2_7()
+    section_2_8()
+    section_2_10()
+    exercise_2_11()

@@ -241,7 +241,7 @@ def section_2_10(runs=1000, time=1000):
     plt.savefig('../images/sec_2_10.png')
 
 
-def exercise_2_11(runs=1000, time=10000):
+def exercise_2_11(runs=1000, time=20000):
     generators = [
         lambda epsilon: Bandit(epsilon=epsilon, step_size=0.1, is_sample_avg=False, is_nonstationary=True),
         lambda initial: Bandit(epsilon=0, q_estimated_initial=initial, step_size=0.1, is_nonstationary=True),
@@ -273,10 +273,10 @@ def exercise_2_11(runs=1000, time=10000):
 
 
 if __name__ == '__main__':
-    section_2_3()
-    exercise_2_5()
-    section_2_6()
-    section_2_7()
-    section_2_8()
+    # section_2_3()
+    # exercise_2_5()
+    # section_2_6()
+    # section_2_7()
+    # section_2_8()
     section_2_10()
     exercise_2_11()

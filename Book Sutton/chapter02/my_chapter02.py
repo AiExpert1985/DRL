@@ -4,8 +4,8 @@ from tqdm import tqdm
 
 
 class Bandit:
-    def __init__(self, arms=10, epsilon=0., step_size=0.1, q_estimated_initial=0., gradient_baseline=True,
-                 is_sample_avg=False, ucb_param=None, is_gradient=False, is_nonstationary=False):
+    def __init__(self, arms=10, epsilon=0., step_size=0.1, q_estimated_initial=0., q_true_initial=0.,
+                 gradient_baseline=True, is_sample_avg=False, ucb_param=None, is_gradient=False, is_nonstationary=False):
         self.arms = arms
         self.actions = np.arange(self.arms)
         self.epsilon = epsilon
@@ -15,10 +15,12 @@ class Bandit:
         self.is_gradient = is_gradient
         self.is_nonstationary = is_nonstationary
         self.q_estimated_initial = q_estimated_initial
+        self.q_true_initial = q_true_initial
         self.gradient_baseline = gradient_baseline
 
     def reset(self):
-        self.q_true = np.zeros(self.arms) if self.is_nonstationary else np.random.randn(self.arms)
+        self.q_true = np.zeros(self.arms) if self.is_nonstationary \
+            else np.random.randn(self.arms) + self.q_true_initial
         self.q_estimated = np.zeros(self.arms) + self.q_estimated_initial
         self.action_counts = np.zeros(self.arms)
         self.reward_mean = 0
@@ -48,6 +50,7 @@ class Bandit:
     def step(self, action):
         self.t += 1
         reward = self.q_true[action] + np.random.randn()
+        self.reward_mean += (reward - self.reward_mean) / self.t
         self.action_counts[action] += 1
         if self.is_sample_avg:
             self.step_size = 1 / self.action_counts[action]
@@ -62,7 +65,6 @@ class Bandit:
             self.q_estimated[action] += self.step_size * (reward - self.q_estimated[action])
         if self.is_nonstationary:
             self.q_true += np.random.normal(0, 0.01, self.arms)
-        self.reward_mean += (reward - self.reward_mean) / self.t
         return reward
 
 
@@ -181,10 +183,10 @@ def section_2_7(runs=1000, time=1000):
 
 
 def section_2_8(runs=1000, time=1000):
-    bandits = [Bandit(step_size=0.1, is_gradient=True, gradient_baseline=True),
-               Bandit(step_size=0.1, is_gradient=True, gradient_baseline=False),
-               Bandit(step_size=0.4, is_gradient=True, gradient_baseline=True),
-               Bandit(step_size=0.4, is_gradient=True, gradient_baseline=False),
+    bandits = [Bandit(step_size=0.1, is_gradient=True, gradient_baseline=True, q_true_initial=4),
+               Bandit(step_size=0.1, is_gradient=True, gradient_baseline=False, q_true_initial=4),
+               Bandit(step_size=0.4, is_gradient=True, gradient_baseline=True, q_true_initial=4),
+               Bandit(step_size=0.4, is_gradient=True, gradient_baseline=False, q_true_initial=4),
                ]
     rewards, best_actions = run_simulation(bandits, runs=runs, time=time)
 
@@ -213,7 +215,7 @@ def section_2_8(runs=1000, time=1000):
 
 def section_2_10(runs=1000, time=1000):
     generators = [
-        lambda epsilon: Bandit(epsilon=epsilon, is_sample_avg=True),
+        lambda epsilon: Bandit(epsilon=epsilon, is_sample_avg=True, ),
         lambda initial: Bandit(epsilon=0, q_estimated_initial=initial, step_size=0.1),
         lambda coef: Bandit(epsilon=0, ucb_param=coef, is_sample_avg=True),
         lambda alpha: Bandit(is_gradient=True, step_size=alpha, gradient_baseline=True)
@@ -277,6 +279,6 @@ if __name__ == '__main__':
     # exercise_2_5()
     # section_2_6()
     # section_2_7()
-    # section_2_8()
-    section_2_10()
-    exercise_2_11()
+    section_2_8()
+    # section_2_10()
+    # exercise_2_11()

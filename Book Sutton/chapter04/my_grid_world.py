@@ -86,6 +86,25 @@ def policy_iteration():
         V_old = V
         draw_grid(np.round(V_old, decimals=2))
 
+def value_iteration():
+    V_old = np.zeros((WORLD_SIZE, WORLD_SIZE))
+    for i in range(MAX_ITERATIONS):
+        V = np.zeros_like(V_old)
+        for x in range(WORLD_SIZE):
+            for y in range(WORLD_SIZE):
+                state = (x, y)
+                action_values = []
+                for action, _ in enumerate(ACTIONS):
+                    (x_new, y_new), reward = step(state, action)
+                    action_values.append(reward + DISCOUNT * V_old[x_new, y_new])
+                V[state] = np.max(action_values)
+        draw_grid(np.round(V_old, decimals=2))
+        if abs(V - V_old).max() < 0.0001:
+            return V
+        V_old = V
+    return V_old
+
 
 if __name__ == '__main__':
-    policy_iteration()
+    # policy_iteration()
+    value_iteration()

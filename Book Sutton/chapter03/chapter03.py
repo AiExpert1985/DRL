@@ -25,7 +25,7 @@ ACTIONS = [np.array([0, -1]),
            np.array([-1, 0]),
            np.array([0, 1]),
            np.array([1, 0])]
-ACTIONS_FIGS=[ '←', '↑', '→', '↓']
+ACTIONS_FIGS = ['←', '↑', '→', '↓']
 
 
 ACTION_PROB = 0.25
@@ -91,15 +91,15 @@ def draw_policy(optimal_values):
 
     # Add cells
     for (i, j), val in np.ndenumerate(optimal_values):
-        next_vals=[]
+        next_vals = []
         for action in ACTIONS:
             next_state, _ = step([i, j], action)
             next_vals.append(optimal_values[next_state[0],next_state[1]])
 
-        best_actions=np.where(next_vals == np.max(next_vals))[0]
-        val=''
+        best_actions = np.where(next_vals == np.max(next_vals))[0]
+        val = ''
         for ba in best_actions:
-            val+=ACTIONS_FIGS[ba]
+            val += ACTIONS_FIGS[ba]
 
         # add state labels
         if [i, j] == A_POS:

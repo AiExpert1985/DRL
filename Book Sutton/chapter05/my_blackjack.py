@@ -8,9 +8,10 @@ HIT = 0
 STAND = 1
 ACTIONS = [HIT, STAND]
 
+EPSILON = 0.1
 GAMMA = 0.9
 
-state_action_value = {}  # mapping (player_sum, usable_ace, dealer_card_val): (hit_val, stand_val)
+state_action_value = {}  # mapping (player_sum, usable_ace, dealer_card_val): [hit_val, stand_val]
 
 
 def pick_card():
@@ -51,11 +52,11 @@ def player_fixed_policy(state):
     return action
 
 
-def player_monte_carlo_policy(state):
-    if state_action_value.get(state):
-        action = np.argmax(state_action_value[state])
-    else:
+def player_MC_policy(state):
+    if not state_action_value.get(state) or np.random.rand() < EPSILON:
         action = np.random.choice(ACTIONS)
+    else:
+        action = np.argmax(state_action_value[state])
     return action
 
 
@@ -69,7 +70,7 @@ def player_turn(state):
     player_sum, usable_ace, dealer_card_val = state
     while True:
         # action = player_fixed_policy(state)
-        action = player_monte_carlo_policy(state)
+        action = player_MC_policy(state)
         trajectory.append((state, action))
         if action == STAND:
             break
@@ -116,20 +117,20 @@ def play_game():
 
 
 def monte_carlo_update(trajectory, result):
-    q_next = 0
+    Q_next = 0
     trajectory.reverse()
     for state, action in trajectory:
         if state_action_value.get(state):
-            q = state_action_value[state][action]
-            q += result + GAMMA * q_next
-            q_next = q
+            Qs = state_action_value[state]
+            Qs[action] += result + GAMMA * Q_next
+            Q_next = Qs[action]
         else:
-            state_action_value[state] = (0, 0)
+            state_action_value[state] = [0, 0]
 
 
 def run_simulation(n_games):
     results = []
-    for i in tqdm(range(n_games)):
+    for _ in tqdm(range(n_games)):
         trajectory, result = play_game()
         monte_carlo_update(trajectory, result)
         results.append(result)
@@ -137,5 +138,5 @@ def run_simulation(n_games):
 
 
 if __name__ == '__main__':
-    num_games = 10000
+    num_games = 100000
     run_simulation(num_games)

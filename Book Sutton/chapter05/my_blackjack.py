@@ -1,6 +1,6 @@
 import numpy as np
 from tqdm import tqdm
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 from tensorboardX import SummaryWriter
 
 DECK = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
@@ -12,11 +12,14 @@ HIT = 0
 STAND = 1
 ACTIONS = [HIT, STAND]
 
+N_EPISODES = 100000
+
 GAMMA = 0.9
 ALPHA = 0.1
+
 EPSILON_FINAL = 0.01
 EPSILON_START = 1.0
-EPSILON_DECAY = 5000
+EPSILON_DECAY = N_EPISODES / 2
 
 TERMINAL_STATE = (0, False, 0)
 state_action_value = defaultdict(lambda: [0, 0])
@@ -73,10 +76,11 @@ def player_ucb_policy(state, t):
     return action
 
 def player_e_greedy_policy(state, t):
+    state_action_vals = state_action_value[state]
     epsilon = max(EPSILON_FINAL, (EPSILON_START - (t / EPSILON_DECAY)))
-    if np.random.rand() < epsilon:
+    if np.random.rand() < epsilon or state_action_vals[0] == state_action_vals[1]:
         return np.random.choice(ACTIONS)
-    action = np.argmax(state_action_value[state])
+    action = np.argmax(state_action_vals)
     return action
 
 
@@ -89,9 +93,10 @@ def player_turn(state, t):
     trajectory = []
     player_sum, usable_ace, dealer_card_val = state
     while True:
-        # action = player_ucb_policy(state, t)
-        action = player_e_greedy_policy(state, t)
-        if action == STAND:            trajectory.append((state, action))
+        action = player_ucb_policy(state, t)
+        # action = player_e_greedy_policy(state, t)
+        if action == STAND:
+            trajectory.append((state, action))
             break
         player_card = pick_card()
         player_sum, usable_ace = evaluate_hand(player_sum, usable_ace, player_card)
@@ -190,9 +195,8 @@ def run_eval_improv_simulation(total_games, eval_every_n):
     trajectories = []
     for t in tqdm(range(total_games)):
         if t % eval_every_n == 0:
-            monte_carlo_policy_evaluation(trajectories, results)
+            monte_carlo_policy_evaluation(trajectories, results[-len(trajectories):])
             trajectories = []
-            results = []
         trajectory, result = play_game(t)
         # print(trajectory, result)
         trajectories.append(trajectory)
@@ -205,6 +209,5 @@ def run_eval_improv_simulation(total_games, eval_every_n):
 
 
 if __name__ == '__main__':
-    num_games = 10000000
-    run_simulation(num_games)
-    # run_eval_improv_simulation(num_games, eval_every_n=10000)
+    # run_simulation(N_EPISODES)
+    run_eval_improv_simulation(N_EPISODES, eval_every_n=10000)

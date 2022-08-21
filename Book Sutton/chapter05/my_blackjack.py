@@ -1,6 +1,7 @@
 import numpy as np
 from tqdm import tqdm
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
+from tensorboardX import SummaryWriter
 
 DECK = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
 CARD_VALUE = {'2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
@@ -11,13 +12,15 @@ HIT = 0
 STAND = 1
 ACTIONS = [HIT, STAND]
 
-EPSILON_START = 1.0
-EPSILON_FINAL = 0.01
 GAMMA = 0.9
 ALPHA = 0.1
+EPSILON_FINAL = 0.01
+EPSILON_START = 1.0
+EPSILON_DECAY = 5000
 
 TERMINAL_STATE = (0, False, 0)
 state_action_value = defaultdict(lambda: [0, 0])
+state_visit = defaultdict(lambda: [0, 0])
 
 
 def pick_card():
@@ -58,13 +61,22 @@ def player_fixed_policy(state):
     return action
 
 
-def player_MC_policy(state, epsilon):
-    if not state_action_value.get(state) or np.random.rand() < epsilon:
+def player_ucb_policy(state, t):
+    state_action_val = state_action_value[state]
+    action_counts = state_visit[state]
+    ucb = np.sqrt(np.log(t + 1) / (np.array(action_counts) + 0.00001))
+    state_action_val += ucb
+    if state_action_val[0] == state_action_val[1]:
         action = np.random.choice(ACTIONS)
-        print("Random", action)
     else:
-        action = np.argmax(state_action_value[state])
-        print("Best", action)
+        action = np.argmax(state_action_val)
+    return action
+
+def player_e_greedy_policy(state, t):
+    epsilon = max(EPSILON_FINAL, (EPSILON_START - (t / EPSILON_DECAY)))
+    if np.random.rand() < epsilon:
+        return np.random.choice(ACTIONS)
+    action = np.argmax(state_action_value[state])
     return action
 
 
@@ -73,27 +85,21 @@ def dealer_policy(dealer_sum):
     return action
 
 
-def player_turn(state, epsilon):
-    print("**************************** player turn started", "with epsilon =", epsilon)
+def player_turn(state, t):
     trajectory = []
     player_sum, usable_ace, dealer_card_val = state
     while True:
-        print("state", state)
-        print("state value", state_action_value[state])
-        # action = player_fixed_policy(state)
-        action = player_MC_policy(state, epsilon)
-        if action == STAND:
-            trajectory.append((state, action, TERMINAL_STATE))
+        # action = player_ucb_policy(state, t)
+        action = player_e_greedy_policy(state, t)
+        if action == STAND:            trajectory.append((state, action))
             break
         player_card = pick_card()
-        print("card", player_card)
         player_sum, usable_ace = evaluate_hand(player_sum, usable_ace, player_card)
         if player_sum > 21:
-            trajectory.append((state, action, TERMINAL_STATE))
+            trajectory.append((state, action))
             break
         next_state = (player_sum, usable_ace, dealer_card_val)
-        print("next_state", next_state)
-        trajectory.append((state, action, next_state))
+        trajectory.append((state, action))
         state = next_state
     return trajectory, player_sum
 
@@ -122,9 +128,9 @@ def game_result(player_sum, dealer_sum):
     return result
 
 
-def play_game(epsilon):
+def play_game(t):
     initial_state = initialize_game()
-    trajectory, player_sum = player_turn(initial_state, epsilon)
+    trajectory, player_sum = player_turn(initial_state, t)
     if player_sum > 21:
         result = -1
     else:
@@ -134,41 +140,71 @@ def play_game(epsilon):
     return trajectory, result
 
 
-def monte_carlo_update(trajectory, rewards):
-    # print("**************************** a game started **************************")
-    # print('game result =', result)
+def monte_carlo_update(trajectory, result):
+    discounts = [1]
+    for _ in range(len(trajectory)):
+        discounts.append(discounts[-1] * GAMMA)
+    discounts.reverse()
     trajectory.reverse()
-    rewards.reverse()
-    for (state, action, next_state), reward in zip(trajectory, rewards):
-        # print(state, action, next_state, reward)
+    for (state, action), discount in zip(trajectory, discounts):
         state_action_vals = state_action_value[state]
-        # print('state, action = ', state, action)
-        # print('state_action_vals', state_action_vals)
-        # print('V_next', V_next)
-        V_next = np.max(state_action_value[next_state])
-        state_action_vals[action] += ALPHA * (reward - GAMMA * V_next)
-        # print('state_action_val', state_action_vals[action])
+        counts = state_visit[state]
+        counts[action] += 1
+        n = counts[action]
+        state_action_vals[action] += 1/n * (discount * result - state_action_vals[action])
         state_action_value[state] = state_action_vals
-        # print("======================================")
+        state_visit[state] = counts
+
+def monte_carlo_policy_evaluation(trajectories, rewards):
+    visited_states = defaultdict(list)
+    discounts = [GAMMA ** i for i in range(12)]  # max steps in each game can't exceed 11
+    for trajectory, r in zip(trajectories, rewards):
+        trajectory.reverse()
+        for (s, a), gamma in zip(trajectory, discounts[:len(trajectory)]):
+            G = gamma * r
+            visited_states[(s, a)].append(G)
+    # now update state_values with new values
+    for (s, a), val in visited_states.items():
+        # print(s, a, "=", val)
+        state_action_value[s][a] = np.mean(val)
+        state_visit[s][a] += len(val)
 
 
 def run_simulation(n_games):
+    writer = SummaryWriter(comment="-blackjack")
     results = []
-    epsilon_decay = n_games / 4
-    for i in tqdm(range(n_games)):
-        epsilon = max(EPSILON_FINAL, (EPSILON_START - (i / epsilon_decay)))
-        trajectory, result = play_game(epsilon)
-        print(f"====================== game result = {result} =======================")
-        rewards = [0] * len(trajectory)
-        rewards[-1] = result
-        monte_carlo_update(trajectory, rewards)
+    for t in tqdm(range(n_games)):
+        trajectory, result = play_game(t)
+        monte_carlo_update(trajectory, result)
         results.append(result)
-    print("player's mean score of last 100 games = ", np.round(np.mean(results[-1000:]), 3))
+        writer.add_scalar("result_100", np.mean(results[-100:]), t)
+    print("player's mean score of last 100 games = ", np.round(np.mean(results[-int(len(results)/2):]), 3))
     print(len(state_action_value))
-    # for key, val in state_action_value.items():
-    #     print(key, ":", val)
+    for key in sorted(state_action_value.keys(), reverse=True):
+        val = state_action_value[key]
+        print(f'{key}: [{round(val[0], 2)}, {round(val[1], 2)}]; count = {state_visit[key]}')
+
+
+def run_eval_improv_simulation(total_games, eval_every_n):
+    results = []
+    trajectories = []
+    for t in tqdm(range(total_games)):
+        if t % eval_every_n == 0:
+            monte_carlo_policy_evaluation(trajectories, results)
+            trajectories = []
+            results = []
+        trajectory, result = play_game(t)
+        # print(trajectory, result)
+        trajectories.append(trajectory)
+        results.append(result)
+    print("player's mean score of last 100 games = ", np.round(np.mean(results[int(len(results)/2):]), 3))
+    print(len(state_action_value))
+    for key in sorted(state_action_value.keys(), reverse=True):
+        val = state_action_value[key]
+        print(f'{key}: [{round(val[0], 2)}, {round(val[1], 2)}]; count = {state_visit[key]}')
 
 
 if __name__ == '__main__':
-    num_games = 10000
+    num_games = 10000000
     run_simulation(num_games)
+    # run_eval_improv_simulation(num_games, eval_every_n=10000)

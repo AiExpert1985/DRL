@@ -156,5 +156,5 @@ def print_order_states():
 
 
 if __name__ == '__main__':
-    n_games = 500000
+    n_games = 1000000
     run_simulation(n_games)

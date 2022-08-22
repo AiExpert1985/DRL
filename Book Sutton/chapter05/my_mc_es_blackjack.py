@@ -11,21 +11,12 @@ HIT = 0
 STAND = 1
 ACTIONS = [HIT, STAND]
 
-N_EPISODES = 100000
-
 GAMMA = 0.9
-DISCOUNTS = [GAMMA ** i for i in range(12)]           # max steps in each game can't exceed 11
-ALPHA = 0.1
-
-EPSILON_FINAL = 0.01
-EPSILON_START = 1.0
-EPSILON_DECAY = N_EPISODES / 2
-
-TERMINAL_STATE = (0, False, 0)
+DISCOUNTS = [GAMMA ** i for i in range(12)]                 # max steps in each game can't exceed 11
 
 state_value = defaultdict(lambda: [0, 0])                   # state: [hit_value, stand_value]
 policy = defaultdict(lambda: np.random.choice(ACTIONS))     # state: action
-visit_counts = defaultdict(lambda: 1)                       # (state, action): visit_count
+state_action_count = defaultdict(lambda: 1)                 # (state, action): visit_count
 
 
 def pick_card():
@@ -69,22 +60,20 @@ def dealer_policy(dealer_sum):
     return action
 
 
-def player_turn(state, t):
+def player_turn(state, initial_action=None):
     trajectory = []
     player_sum, usable_ace, dealer_card_val = state
+    action = initial_action if initial_action is not None else player_policy(state)
     while True:
-        action = player_policy(state)
+        trajectory.append((state, action))
         if action == STAND:
-            trajectory.append((state, action))
             break
         player_card = pick_card()
         player_sum, usable_ace = evaluate_hand(player_sum, usable_ace, player_card)
         if player_sum > 21:
-            trajectory.append((state, action))
             break
-        next_state = (player_sum, usable_ace, dealer_card_val)
-        trajectory.append((state, action))
-        state = next_state
+        state = (player_sum, usable_ace, dealer_card_val)
+        action = player_policy(state)
     return trajectory, player_sum
 
 
@@ -112,9 +101,9 @@ def game_result(player_sum, dealer_sum):
     return result
 
 
-def play_game(t):
-    initial_state = initialize_game()
-    trajectory, player_sum = player_turn(initial_state, t)
+def play_game(initial_state=None, player_initial_action=None):
+    initial_state = initial_state if initial_state is not None else initialize_game()
+    trajectory, player_sum = player_turn(initial_state, player_initial_action)
     if player_sum > 21:
         result = -1
     else:
@@ -128,25 +117,44 @@ def monte_carlo_policy_iteration(trajectory, reward):
     trajectory.reverse()
     for (s, a), discount in zip(trajectory, DISCOUNTS[:len(trajectory)]):
         G = discount * reward
-        n = visit_counts[(s, a)]
-        state_value[s][a] += 1/n * (G - state_value[s][a])
-        visit_counts[(s, a)] = n + 1
-        policy[s] = np.argmax(state_value[s])
+        n = state_action_count[(s, a)]
+        Qs = state_value[s]
+        Qs[a] += 1/n * (G - state_value[s][a])
+        state_action_count[(s, a)] = n + 1
+        policy[s] = np.random.choice(np.where(Qs == np.max(Qs))[0])
 
 
-def run_simulation(total_games, eval_every_n):
+def train(total_games):
     results = []
-    for t in tqdm(range(total_games)):
-        trajectory, result = play_game(t)
+    for _ in tqdm(range(total_games)):
+        trajectory, result = play_game(player_initial_action=np.random.choice(ACTIONS))
         monte_carlo_policy_iteration(trajectory, result)
         results.append(result)
-    print("player's mean score of last 100 games = ", np.round(np.mean(results[int(len(results)/2):]), 3))
-    print(len(state_value))
+    return results
+
+
+def test(num_games):
+    results = []
+    for _ in range(num_games):
+        _, result = play_game()
+        results.append(result)
+    return np.mean(results)
+
+
+def run_simulation(total_games):
+    train(total_games)
+    result = test(100)
+    print("player's mean score of last 100 games = ", np.round(result, 2))
+    print_order_states()
+
+
+def print_order_states():
     for key in sorted(state_value.keys(), reverse=True):
         val = state_value[key]
         print(f'{key}: [{round(val[0], 2)}, {round(val[1], 2)}]; '
-              f'count = [{visit_counts[(key, 0)]}, {visit_counts[(key, 1)]}]')
+              f'counts = [{state_action_count[(key, 0)]}, {state_action_count[(key, 1)]}]')
 
 
 if __name__ == '__main__':
-    run_simulation(N_EPISODES, eval_every_n=10000)
+    n_games = 500000
+    run_simulation(n_games)

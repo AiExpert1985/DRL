@@ -124,38 +124,28 @@ def play_game(t):
     return trajectory, result
 
 
-def monte_carlo_policy_iteration(trajectory, rewards):
+def monte_carlo_policy_iteration(trajectory, reward):
     trajectory.reverse()
     for (s, a), discount in zip(trajectory, DISCOUNTS[:len(trajectory)]):
-        G = discount * r
+        G = discount * reward
         n = visit_counts[(s, a)]
         state_value[s][a] += 1/n * (G - state_value[s][a])
         visit_counts[(s, a)] = n + 1
-    for
-
-        ret_visit =
-        ret_visit[0] = 1/ret_visit[1] * (ret - ret_visit[0])
-        visited_states[(s, a)].append(ret)
-    for (s, a), val in visited_states.items():
-        state_action_value[s][a] = np.mean(val)
-        state_visit[s][a] += len(val)
+        policy[s] = np.argmax(state_value[s])
 
 
 def run_simulation(total_games, eval_every_n):
     results = []
-    trajectories = []
     for t in tqdm(range(total_games)):
-        if t % eval_every_n == 0:
-            monte_carlo_policy_iteration(trajectories, results[-len(trajectories):])
-            trajectories = []
         trajectory, result = play_game(t)
-        trajectories.append(trajectory)
+        monte_carlo_policy_iteration(trajectory, result)
         results.append(result)
     print("player's mean score of last 100 games = ", np.round(np.mean(results[int(len(results)/2):]), 3))
     print(len(state_value))
     for key in sorted(state_value.keys(), reverse=True):
         val = state_value[key]
-        print(f'{key}: [{round(val[0], 2)}, {round(val[1], 2)}]; count = {state_visit[key]}')
+        print(f'{key}: [{round(val[0], 2)}, {round(val[1], 2)}]; '
+              f'count = [{visit_counts[(key, 0)]}, {visit_counts[(key, 1)]}]')
 
 
 if __name__ == '__main__':

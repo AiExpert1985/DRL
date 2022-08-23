@@ -153,7 +153,8 @@ def run_simulation(total_games):
 def print_order_states():
     for key in sorted(state_value.keys(), reverse=True):
         val = state_value[key]
-        print(f'{key}: [{round(val[0], 2)}, {round(val[1], 2)}]; policy: {policy[key]}; '
+        print(f'{key}: [{round(val[0], 2)}, {round(val[1], 2)}]; '
+              f'policy: {policy[key]}; '
               f'counts: [{state_action_count[(key, 0)]}, {state_action_count[(key, 1)]}]')
 
 

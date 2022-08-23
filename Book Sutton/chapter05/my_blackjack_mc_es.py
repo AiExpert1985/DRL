@@ -143,7 +143,7 @@ def test(num_games):
 
 def run_simulation(total_games):
     train(total_games)
-    result = test(100)
+    result = test(1000000)
     print("player's mean score of last 100 games = ", np.round(result, 2))
     print_order_states()
 
@@ -156,5 +156,5 @@ def print_order_states():
 
 
 if __name__ == '__main__':
-    n_games = 5000000
+    n_games = 1000000
     run_simulation(n_games)

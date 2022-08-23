@@ -11,7 +11,7 @@ HIT = 0
 STAND = 1
 ACTIONS = [HIT, STAND]
 
-EPSILON = 0.01
+EPSILON = 0.1
 GAMMA = 0.9
 DISCOUNTS = [GAMMA ** i for i in range(12)]                 # max steps in each game can't exceed 11
 
@@ -158,5 +158,5 @@ def print_order_states():
 
 
 if __name__ == '__main__':
-    n_games = 100000
+    n_games = 10000000
     run_simulation(n_games)

@@ -53,13 +53,19 @@ def initialize_game():
 
 
 def player_behavior_policy(state):
-    if np.random.rand() < EPSILON:
-        return np.random.choice(ACTIONS)
-    return policy[state]
+    return np.random.choice(ACTIONS) if np.random.rand() < EPSILON else policy[state]
+
+
+def player_behavior_policy_prob(state, action):
+    return (1-EPSILON) + (EPSILON/len(ACTIONS)) if action == policy[state] else EPSILON/len(ACTIONS)
 
 
 def player_target_policy(state):
     return policy[state]
+
+
+def player_target_policy_prob(state, action):
+    return 1.0 if action == policy[state] else 0.0
 
 
 def dealer_policy(dealer_sum):
@@ -121,13 +127,15 @@ def play_game(player_policy, initial_state=None):
 
 def monte_carlo_policy_iteration(trajectory, reward):
     trajectory.reverse()
-    for (s, a), discount in zip(trajectory, DISCOUNTS[:len(trajectory)]):
-        G = discount * reward
-        n = state_action_count[(s, a)] + 1
-        Qs = state_value[s]
-        Qs[a] += 1/n * (G - state_value[s][a])
-        state_action_count[(s, a)] = n
-        policy[s] = np.random.choice(np.where(Qs == np.max(Qs))[0])
+    imp_samp_ratio = 1
+    for (state, action), discount in zip(trajectory, DISCOUNTS[:len(trajectory)]):
+        imp_samp_ratio *= player_target_policy_prob(state, action) / player_behavior_policy_prob(state, action)
+        G = imp_samp_ratio * discount * reward
+        n = state_action_count[(state, action)] + 1
+        Qs = state_value[state]
+        Qs[action] += 1/n * (G - state_value[state][action])
+        state_action_count[(state, action)] = n
+        policy[state] = np.random.choice(np.where(Qs == np.max(Qs))[0])
 
 
 def train(total_games):
@@ -141,7 +149,7 @@ def train(total_games):
 
 def test(num_games):
     results = []
-    for _ in range(num_games):
+    for _ in tqdm(range(num_games)):
         _, result = play_game(player_target_policy)
         results.append(result)
     return np.mean(results)

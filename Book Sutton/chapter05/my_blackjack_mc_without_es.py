@@ -53,9 +53,7 @@ def initialize_game():
 
 
 def player_behavior_policy(state):
-    if np.random.rand() < EPSILON:
-        return np.random.choice(ACTIONS)
-    return policy[state]
+    return np.random.choice(ACTIONS) if np.random.rand() < EPSILON else policy[state]
 
 
 def player_target_policy(state):
@@ -131,6 +129,7 @@ def monte_carlo_policy_iteration(trajectory, reward):
 
 
 def train(total_games):
+    print("training started ....")
     results = []
     for _ in tqdm(range(total_games)):
         trajectory, result = play_game(player_behavior_policy)
@@ -140,8 +139,9 @@ def train(total_games):
 
 
 def test(num_games):
+    print("testing started ...")
     results = []
-    for _ in range(num_games):
+    for _ in tqdm(range(num_games)):
         _, result = play_game(player_target_policy)
         results.append(result)
     return np.mean(results)
@@ -149,7 +149,7 @@ def test(num_games):
 
 def run_simulation(total_games):
     train(total_games)
-    result = test(100000)
+    result = test(1000000)
     print("player's mean score of last 100 games = ", np.round(result, 2))
     print_order_states()
 

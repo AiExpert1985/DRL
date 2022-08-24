@@ -139,6 +139,7 @@ def monte_carlo_policy_iteration(trajectory, reward):
 
 
 def train(total_games):
+    print("training started ...")
     results = []
     for _ in tqdm(range(total_games)):
         trajectory, result = play_game(player_behavior_policy)
@@ -148,6 +149,7 @@ def train(total_games):
 
 
 def test(num_games):
+    print("testing started ....")
     results = []
     for _ in tqdm(range(num_games)):
         _, result = play_game(player_target_policy)
@@ -157,7 +159,7 @@ def test(num_games):
 
 def run_simulation(total_games):
     train(total_games)
-    result = test(100000)
+    result = test(10000)
     print("player's mean score of last 100 games = ", np.round(result, 2))
     print_order_states()
 
@@ -171,5 +173,5 @@ def print_order_states():
 
 
 if __name__ == '__main__':
-    n_games = 1000000
+    n_games = 100000
     run_simulation(n_games)

@@ -52,9 +52,13 @@ def initialize_game():
     return initial_state
 
 
-def player_policy(state):
+def player_behavior_policy(state):
     if np.random.rand() < EPSILON:
         return np.random.choice(ACTIONS)
+    return policy[state]
+
+
+def player_target_policy(state):
     return policy[state]
 
 
@@ -63,7 +67,7 @@ def dealer_policy(dealer_sum):
     return action
 
 
-def player_turn(state):
+def player_turn(player_policy, state):
     trajectory = []
     player_sum, usable_ace, dealer_card_val = state
     while True:
@@ -103,9 +107,9 @@ def game_result(player_sum, dealer_sum):
     return result
 
 
-def play_game(initial_state=None):
+def play_game(player_policy, initial_state=None):
     initial_state = initial_state if initial_state is not None else initialize_game()
-    trajectory, player_sum = player_turn(initial_state)
+    trajectory, player_sum = player_turn(player_policy, initial_state)
     if player_sum > 21:
         result = -1
     else:
@@ -128,8 +132,9 @@ def monte_carlo_policy_iteration(trajectory, reward):
 
 def train(total_games):
     results = []
+    player_policy = player_behavior_policy
     for _ in tqdm(range(total_games)):
-        trajectory, result = play_game()
+        trajectory, result = play_game(player_policy)
         monte_carlo_policy_iteration(trajectory, result)
         results.append(result)
     return results
@@ -137,8 +142,9 @@ def train(total_games):
 
 def test(num_games):
     results = []
+    player_policy = player_target_policy
     for _ in range(num_games):
-        _, result = play_game()
+        _, result = play_game(player_policy)
         results.append(result)
     return np.mean(results)
 
@@ -159,5 +165,5 @@ def print_order_states():
 
 
 if __name__ == '__main__':
-    n_games = 10000000
+    n_games = 1000000
     run_simulation(n_games)

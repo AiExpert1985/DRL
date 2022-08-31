@@ -123,7 +123,7 @@ def monte_carlo_policy_iteration(trajectory, reward):
         G = discount * reward
         n = state_action_count[(s, a)] + 1
         Qs = state_value[s]
-        Qs[a] += 1/n * (G - state_value[s][a])
+        Qs[a] += 1/n * (G - Qs[a])
         state_action_count[(s, a)] = n
         policy[s] = np.random.choice(np.where(Qs == np.max(Qs))[0])
 
@@ -149,7 +149,7 @@ def test(num_games):
 
 def run_simulation(total_games):
     train(total_games)
-    result = test(1000000)
+    result = test(100000)
     print("player's mean score of last 100 games = ", np.round(result, 2))
     print_order_states()
 
@@ -163,5 +163,5 @@ def print_order_states():
 
 
 if __name__ == '__main__':
-    n_games = 1000000
+    n_games = 100000
     run_simulation(n_games)

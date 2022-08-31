@@ -1,3 +1,12 @@
+"""
+chapter 05 of book "Introduction to Reinforcement learning" by Sutton-2018
+blackjack game implementation using:
+- Monte carlo method
+- off policy
+- importance sampling (both ordinary and weighted)
+- incremental implementation
+"""
+
 import numpy as np
 from tqdm import tqdm
 from collections import defaultdict
@@ -13,11 +22,12 @@ ACTIONS = [HIT, STAND]
 
 EPSILON = 0.1
 GAMMA = 0.9
-DISCOUNTS = [GAMMA ** i for i in range(12)]                 # max steps in each game can't exceed 11
+DISCOUNTS = [GAMMA ** i for i in range(12)]               # max steps in each game can't exceed 11
 
-state_value = defaultdict(lambda: [0, 0])                   # state: [hit_value, stand_value]
-policy = defaultdict(lambda: np.random.choice(ACTIONS))     # state: action
-state_action_count = defaultdict(int)                       # (state, action): visit_count
+policy = defaultdict(lambda: np.random.choice(ACTIONS))   # state: action
+V = defaultdict(lambda: [0, 0])                 # state: [hit_value, stand_value]
+N = defaultdict(int)                     # (state, action): visit_count
+C = defaultdict(int)                          # (state,action): sum of imp_ratio at time t
 
 
 def pick_card():
@@ -126,16 +136,21 @@ def play_game(player_policy, initial_state=None):
 
 
 def monte_carlo_policy_iteration(trajectory, reward):
+    version = 'ordinary'
     trajectory.reverse()
-    imp_samp_ratio = 1
+    W = 1
     for (state, action), discount in zip(trajectory, DISCOUNTS[:len(trajectory)]):
-        imp_samp_ratio *= player_target_policy_prob(state, action) / player_behavior_policy_prob(state, action)
-        G = imp_samp_ratio * discount * reward
-        n = state_action_count[(state, action)] + 1
-        Qs = state_value[state]
-        Qs[action] += 1/n * (G - state_value[state][action])
-        state_action_count[(state, action)] = n
-        policy[state] = np.random.choice(np.where(Qs == np.max(Qs))[0])
+        N[(state, action)] += 1
+        G = discount * reward
+        if version == 'ordinary':
+            V[state][action] += 1/N[(state, action)] * (G * W - V[state][action])
+        if version == 'weighted':
+            if W == 0:
+                continue
+            C[(state, action)] += W
+            V[state][action] += W / C[(state, action)] * (G - V[state][action])
+        W *= player_target_policy_prob(state, action) / player_behavior_policy_prob(state, action)
+        policy[state] = np.argmax(V[state])
 
 
 def train(total_games):
@@ -159,17 +174,17 @@ def test(num_games):
 
 def run_simulation(total_games):
     train(total_games)
-    result = test(10000)
+    result = test(100000)
     print("player's mean score of last 100 games = ", np.round(result, 2))
     print_order_states()
 
 
 def print_order_states():
-    for key in sorted(state_value.keys(), reverse=True):
-        val = state_value[key]
-        print(f'{key}: [{round(val[0], 2)}, {round(val[1], 2)}]; '
-              f'policy: {policy[key]}; '
-              f'counts: [{state_action_count[(key, 0)]}, {state_action_count[(key, 1)]}]')
+    for state in sorted(V.keys(), reverse=True):
+        val = V[state]
+        print(f'{state}: [{round(val[0], 2)}, {round(val[1], 2)}]; '
+              f'policy: {player_target_policy(state)}; '
+              f'counts: [{N[(state, 0)]}, {N[(state, 1)]}]')
 
 
 if __name__ == '__main__':

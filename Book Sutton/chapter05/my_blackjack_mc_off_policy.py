@@ -21,7 +21,7 @@ STAND = 1
 ACTIONS = [HIT, STAND]
 
 EPSILON = 0.1
-GAMMA = 0.9
+GAMMA = 1.0
 DISCOUNTS = [GAMMA ** i for i in range(12)]               # max steps in each game can't exceed 11
 
 policy = defaultdict(lambda: np.random.choice(ACTIONS))   # state: action
@@ -136,7 +136,7 @@ def play_game(player_policy, initial_state=None):
 
 
 def monte_carlo_policy_iteration(trajectory, reward):
-    version = 'ordinary'
+    version = 'weighted'
     trajectory.reverse()
     W = 1
     for (state, action), discount in zip(trajectory, DISCOUNTS[:len(trajectory)]):
@@ -146,11 +146,13 @@ def monte_carlo_policy_iteration(trajectory, reward):
             V[state][action] += 1/N[(state, action)] * (G * W - V[state][action])
         if version == 'weighted':
             if W == 0:
-                continue
+                break
             C[(state, action)] += W
             V[state][action] += W / C[(state, action)] * (G - V[state][action])
-        W *= player_target_policy_prob(state, action) / player_behavior_policy_prob(state, action)
         policy[state] = np.argmax(V[state])
+        if policy[state] != action:
+            break
+        W *= player_target_policy_prob(state, action) / player_behavior_policy_prob(state, action)
 
 
 def train(total_games):

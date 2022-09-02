@@ -6,7 +6,7 @@ DECK = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
 CARD_VALUE = {'2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
               'J': 10, 'Q': 10, 'K': 10, 'A': 11}
 
-TERMINAL_STATE = (0, False, 0)
+TERMINAL_STATE = (False, 0, 0)
 
 
 HIT = 0
@@ -14,7 +14,7 @@ STAND = 1
 ACTIONS = [HIT, STAND]
 
 EPSILON = 0.1
-GAMMA = 0.9
+GAMMA = 1.0
 ALPHA = 0.01
 
 V = defaultdict(lambda: [0, 0])                             # state: [hit_value, stand_value]
@@ -30,7 +30,7 @@ def evaluate_card(card):
     return CARD_VALUE[card]
 
 
-def evaluate_hand(cards_sum, usable_ace, card):
+def evaluate_hand(usable_ace, cards_sum, card):
     cards_sum += evaluate_card(card)
     if cards_sum > 21 and (usable_ace or card == 'A'):
         cards_sum -= 10
@@ -49,7 +49,7 @@ def initialize_game():
     if player_sum == 22:
         player_sum = 12
     dealer_card_val = CARD_VALUE[pick_card()]
-    initial_state = (player_sum, usable_ace, dealer_card_val)
+    initial_state = (usable_ace, player_sum, dealer_card_val)
     return initial_state
 
 
@@ -68,18 +68,18 @@ def dealer_policy(dealer_sum):
 
 def player_turn(player_policy, state):
     trajectory = []
-    player_sum, usable_ace, dealer_card_val = state
+    usable_ace, player_sum, dealer_card_val = state
     while player_sum <= 21:
         action = player_policy(state)
         if action == STAND:
             trajectory.append([state, action, TERMINAL_STATE])
             break
         player_card = pick_card()
-        player_sum, usable_ace = evaluate_hand(player_sum, usable_ace, player_card)
+        player_sum, usable_ace = evaluate_hand(usable_ace, player_sum, player_card)
         if player_sum > 21:
             trajectory.append([state, action, TERMINAL_STATE])
             break
-        next_state = (player_sum, usable_ace, dealer_card_val)
+        next_state = (usable_ace, player_sum, dealer_card_val)
         trajectory.append([state, action, next_state])
         state = next_state
     return trajectory, player_sum
@@ -92,7 +92,7 @@ def dealer_turn(card_val):
     dealer_sum = card_val
     while dealer_sum <= 22:
         card_val = pick_card()
-        dealer_sum, usable_ace = evaluate_hand(dealer_sum, usable_ace, card_val)
+        dealer_sum, usable_ace = evaluate_hand(usable_ace, dealer_sum, card_val)
         action = dealer_policy(dealer_sum)
         if action == STAND:
             break
@@ -116,7 +116,7 @@ def show_game(player_sum, dealer_sum, result, trajectory):
     print(f"    {trajectory}")
 
 def play_game(player_policy, print_game=False):
-    initial_state =  initialize_game()
+    initial_state = initialize_game()
     trajectory, player_sum = player_turn(player_policy, initial_state)
     dealer_sum = None
     if player_sum > 21:
@@ -166,10 +166,10 @@ def run_simulation(train_episodes, test_episodes):
     train(train_episodes)
     result = test(test_episodes)
     print(f"player's mean score of {test_episodes} test games = {np.round(result, 2)}")
-    print_order_states()
+    print_ordered_by_player_sum()
 
 
-def print_order_states():
+def print_ordered_by_player_sum():
     for key in sorted(V.keys(), reverse=True):
         val = V[key]
         print(f'{key}: [{round(val[0], 2)}, {round(val[1], 2)}]; '

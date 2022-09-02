@@ -15,6 +15,7 @@ ACTIONS = [HIT, STAND]
 
 EPSILON = 0.1
 GAMMA = 0.9
+ALPHA = 0.01
 
 V = defaultdict(lambda: [0, 0])                             # state: [hit_value, stand_value]
 Pi = defaultdict(lambda: np.random.choice(ACTIONS))         # state: action
@@ -68,13 +69,17 @@ def dealer_policy(dealer_sum):
 def player_turn(player_policy, state):
     trajectory = []
     player_sum, usable_ace, dealer_card_val = state
-    while state is not TERMINAL_STATE:
+    while player_sum <= 21:
         action = player_policy(state)
+        if action == STAND:
+            trajectory.append([state, action, TERMINAL_STATE])
+            break
         player_card = pick_card()
         player_sum, usable_ace = evaluate_hand(player_sum, usable_ace, player_card)
+        if player_sum > 21:
+            trajectory.append([state, action, TERMINAL_STATE])
+            break
         next_state = (player_sum, usable_ace, dealer_card_val)
-        if action == STAND or player_sum > 21:
-            next_state = TERMINAL_STATE
         trajectory.append([state, action, next_state])
         state = next_state
     return trajectory, player_sum
@@ -95,24 +100,36 @@ def dealer_turn(card_val):
 
 
 def game_result(player_sum, dealer_sum):
-    if player_sum > dealer_sum:
-        result = 1
-    elif player_sum > 21 or player_sum < dealer_sum:
+    if dealer_sum > player_sum:
         result = -1
+    elif player_sum > dealer_sum:
+        result = 1
     else:
         result = 0
     return result
 
+def show_game(player_sum, dealer_sum, result, trajectory):
+    print("***** New Game *****")
+    print(f"    player_sum = {player_sum}")
+    print(f"    dealer_sum = {dealer_sum}")
+    print(f"    result = {result}")
+    print(f"    {trajectory}")
 
-def play_game(player_policy, initial_state=None):
-    initial_state = initial_state if initial_state is not None else initialize_game()
+def play_game(player_policy, print_game=False):
+    initial_state =  initialize_game()
     trajectory, player_sum = player_turn(player_policy, initial_state)
-    dealer_card_val = initial_state[2]
-    dealer_sum = dealer_turn(dealer_card_val)
-    result = 1 if dealer_sum > 21 else game_result(player_sum, dealer_sum)
+    dealer_sum = None
+    if player_sum > 21:
+        result = -1
+    else:
+        dealer_card_val = initial_state[2]
+        dealer_sum = dealer_turn(dealer_card_val)
+        result = 1 if dealer_sum > 21 else game_result(player_sum, dealer_sum)
     rewards = [0] * (len(trajectory) - 1) + [result]
     for i, t in enumerate(trajectory):
         t.append(rewards[i])
+    if print_game:
+        show_game(player_sum, dealer_sum, result, trajectory)
     return trajectory, result
 
 
@@ -121,7 +138,7 @@ def td(trajectory):
     for s, a, s_next, r in trajectory:
         target = r + GAMMA * np.max(V[s_next])
         td_error = target - V[s][a]
-        V[s] += td_error
+        V[s][a] += ALPHA * td_error
         Pi[s] = np.random.choice(np.where(V[s] == np.max(V[s]))[0])
         N[(s, a)] += 1
 
@@ -140,15 +157,15 @@ def test(num_games):
     print("testing started ...")
     results = []
     for _ in tqdm(range(num_games)):
-        _, result = play_game(player_target_policy)
+        _, result = play_game(player_target_policy, print_game=False)
         results.append(result)
     return np.mean(results)
 
 
-def run_simulation(total_games):
-    train(total_games)
-    result = test(100000)
-    print("player's mean score of last 100 games = ", np.round(result, 2))
+def run_simulation(train_episodes, test_episodes):
+    train(train_episodes)
+    result = test(test_episodes)
+    print(f"player's mean score of {test_episodes} test games = {np.round(result, 2)}")
     print_order_states()
 
 
@@ -161,5 +178,6 @@ def print_order_states():
 
 
 if __name__ == '__main__':
-    n_games = 100000
-    run_simulation(n_games)
+    n_train = 1000000
+    n_test = 100000
+    run_simulation(n_train, n_test)

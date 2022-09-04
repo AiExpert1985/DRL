@@ -1,6 +1,7 @@
 import numpy as np
 from tqdm import tqdm
 from collections import defaultdict
+import matplotlib.pyplot as plt
 
 STATES = ['LEFT', 'A', 'B', 'C', 'D', 'E', 'RIGHT']
 TRUE_VALUE = {state: (i+1)/6 for i, state in enumerate(STATES[1:6])}
@@ -10,10 +11,8 @@ LEFT = -1
 RIGHT = 1
 ACTIONS = [LEFT, RIGHT]
 
-ALPHA = 0.05
+ALPHA = 0.04
 GAMMA = 1.0
-
-V = defaultdict(lambda: 0.5)
 
 
 def reward_fn(state_a, state_b):
@@ -42,15 +41,24 @@ def run_episode():
     return trajectory, rewards
 
 
-def temporal_difference(trajectory):
+def temporal_difference(trajectory, V):
     trajectory.reverse()
     for state, next_state, reward in trajectory:
         target = reward if next_state in TERMINAL_STATE else reward + GAMMA * V[next_state]
         td_error = target - V[state]
-        V[state] += ALPHA * td_error
+        V[state] = V[state] + ALPHA * td_error
 
 
-def rmse_error():
+def monte_carlo(trajectory, V):
+    trajectory.reverse()
+    target = 0  # another name for the return (G)
+    for state, _, reward in trajectory:
+        target += GAMMA * reward
+        mc_error = target - V[state]
+        V[state] = V[state] + ALPHA * mc_error
+
+
+def rmse_error(V):
     se = []
     for state in STATES[1: 6]:
         e = V[state] - TRUE_VALUE[state]
@@ -60,26 +68,35 @@ def rmse_error():
     return rmse
 
 
-def monte_carlo(trajectory):
-    pass
-
-
-def run():
-    episodes = 100
+def run(method=temporal_difference, episodes=100):
+    V = defaultdict(lambda: 0.5)
     rewards = 0
     for _ in range(episodes):
         trajectory, reward = run_episode()
         rewards += reward
-        temporal_difference(trajectory)
-        # monte_carlo(trajectory)
-    return rmse_error()
+        method(trajectory, V)
+    return V
 
+
+def plot_6_2_left():
+    true_vals = [TRUE_VALUE[state] for state in STATES[1:6]]
+    for n in [1, 10, 100]:
+        V = run(method=temporal_difference, episodes=n)
+        vals = [V[state] for state in STATES[1:6]]
+        plt.plot(STATES[1:6], vals, label=n)
+    plt.plot(STATES[1:6], true_vals, label='true')
+    plt.show()
+
+
+def simulate():
+    num_tries = 100
+    errors = []
+    for _ in tqdm(range(num_tries)):
+        V = run()
+        errors.append(rmse_error(V))
+    average_error = np.mean(errors)
+    print('error =', np.round(average_error, 3))
+    plot_6_2_left()
 
 if __name__ == '__main__':
-    repeat = 100
-    errors = []
-    for _ in tqdm(range(repeat)):
-        error = run()
-        errors.append(error)
-    average_error = np.mean(errors)
-    print('error =', round(average_error, 3))
+    simulate()

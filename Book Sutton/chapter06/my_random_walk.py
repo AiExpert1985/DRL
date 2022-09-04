@@ -10,7 +10,7 @@ LEFT = -1
 RIGHT = 1
 ACTIONS = [LEFT, RIGHT]
 
-ALPHA = 0.1
+ALPHA = 0.05
 GAMMA = 1.0
 
 V = defaultdict(lambda: 0.5)
@@ -46,14 +46,9 @@ def temporal_difference(trajectory):
     trajectory.reverse()
     for state, next_state, reward in trajectory:
         target = reward if next_state in TERMINAL_STATE else reward + GAMMA * V[next_state]
-        # print(state, next_state, reward)
-        # print('target =', target)
         td_error = target - V[state]
-        # print('td_error =', td_error)
-        # print('before V[s] =', V[state])
         V[state] += ALPHA * td_error
-        # print('after V[s] =', V[state])
-        # print("------------")
+
 
 def rmse_error():
     se = []
@@ -72,17 +67,19 @@ def monte_carlo(trajectory):
 def run():
     episodes = 100
     rewards = 0
-    for _ in tqdm(range(episodes)):
+    for _ in range(episodes):
         trajectory, reward = run_episode()
         rewards += reward
         temporal_difference(trajectory)
         # monte_carlo(trajectory)
-    for state, val in V.items():
-        print(state, round(val, 2), round(TRUE_VALUE[state], 2))
-    error = rmse_error()
-    print('error =', round(error, 2))
-    # print(f'average rewards of {episodes} episode = {round(rewards/episodes, 2)}')
+    return rmse_error()
 
 
 if __name__ == '__main__':
-    run()
+    repeat = 100
+    errors = []
+    for _ in tqdm(range(repeat)):
+        error = run()
+        errors.append(error)
+    average_error = np.mean(errors)
+    print('error =', round(average_error, 3))

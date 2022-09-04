@@ -11,9 +11,6 @@ LEFT = -1
 RIGHT = 1
 ACTIONS = [LEFT, RIGHT]
 
-ALPHA = 0.04
-GAMMA = 1.0
-
 
 def reward_fn(state_a, state_b):
     if state_a == 'E' and state_b == 'RIGHT':
@@ -41,21 +38,21 @@ def run_episode():
     return trajectory, rewards
 
 
-def temporal_difference(trajectory, V):
+def td(trajectory, alpha, gamma, V):
     trajectory.reverse()
     for state, next_state, reward in trajectory:
-        target = reward if next_state in TERMINAL_STATE else reward + GAMMA * V[next_state]
+        target = reward if next_state in TERMINAL_STATE else reward + gamma * V[next_state]
         td_error = target - V[state]
-        V[state] = V[state] + ALPHA * td_error
+        V[state] = V[state] + alpha * td_error
 
 
-def monte_carlo(trajectory, V):
+def mc(trajectory, alpha, gamma, V):
     trajectory.reverse()
-    target = 0  # another name for the return (G)
+    target = 0  # target is another name for the return (G)
     for state, _, reward in trajectory:
-        target += GAMMA * reward
+        target += gamma * reward
         mc_error = target - V[state]
-        V[state] = V[state] + ALPHA * mc_error
+        V[state] = V[state] + alpha * mc_error
 
 
 def rmse_error(V):
@@ -68,35 +65,54 @@ def rmse_error(V):
     return rmse
 
 
-def run(method=temporal_difference, episodes=100):
+def run(method=td, episodes=100, alpha=0.05, gamma=1.0):
     V = defaultdict(lambda: 0.5)
     rewards = 0
     for _ in range(episodes):
         trajectory, reward = run_episode()
         rewards += reward
-        method(trajectory, V)
-    return V
+        method(trajectory, alpha, gamma, V)
+    error = rmse_error(V)
+    return V, error
 
 
 def plot_6_2_left():
     true_vals = [TRUE_VALUE[state] for state in STATES[1:6]]
     for n in [1, 10, 100]:
-        V = run(method=temporal_difference, episodes=n)
+        V, _ = run(method=td, episodes=n)
         vals = [V[state] for state in STATES[1:6]]
         plt.plot(STATES[1:6], vals, label=n)
     plt.plot(STATES[1:6], true_vals, label='true')
+    plt.legend()
     plt.show()
 
 
-def simulate():
-    num_tries = 100
-    errors = []
-    for _ in tqdm(range(num_tries)):
-        V = run()
-        errors.append(rmse_error(V))
-    average_error = np.mean(errors)
-    print('error =', np.round(average_error, 3))
-    plot_6_2_left()
+def plot_6_2_right():
+    n_tries = 100
+    n_episodes = [25, 50, 75, 100]
+    for method in [mc, td]:
+        alphas = [0.01, 0.03, 0.05]
+        for alpha in alphas:
+            plot_errors = []
+            for n in n_episodes:
+                errors = []
+                for i in range(n_tries):
+                    _, e = run(method=method, episodes=n, alpha=alpha)
+                    errors.append(e)
+                plot_errors.append(np.average(errors))
+            plt.plot(n_episodes, plot_errors, label=f'{method.__name__}: {alpha}')
+    plt.legend()
+    plt.show()
+
+
+def simulate(method=td, n_episodes=100):
+    n_episodes = n_episodes
+    V, error = run(method, n_episodes)
+    print('error =', np.round(error, 3))
+    return error
+
 
 if __name__ == '__main__':
-    simulate()
+    # error = simulate()
+    # plot_6_2_left()
+    plot_6_2_right()

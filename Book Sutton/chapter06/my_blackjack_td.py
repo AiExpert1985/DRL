@@ -179,5 +179,5 @@ def print_ordered_by_player_sum():
 
 if __name__ == '__main__':
     n_train = 1000000
-    n_test = 100000
+    n_test = 1000000
     run_simulation(n_train, n_test)

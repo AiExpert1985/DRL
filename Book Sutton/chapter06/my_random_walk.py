@@ -4,7 +4,7 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 
 STATES = ['LEFT', 'A', 'B', 'C', 'D', 'E', 'RIGHT']
-TRUE_VALUE = {state: (i+1)/6 for i, state in enumerate(STATES[1:6])}
+TRUE_VALUE = {state: (i + 1) / 6 for i, state in enumerate(STATES[1:6])}
 TERMINAL_STATE = ['LEFT', 'RIGHT']
 
 LEFT = -1
@@ -37,7 +37,6 @@ def run_episode():
 
 
 def td(trajectory, alpha, gamma, V):
-    trajectory.reverse()
     for state, next_state, reward in trajectory:
         target = reward if next_state in TERMINAL_STATE else reward + gamma * V[next_state]
         td_error = target - V[state]
@@ -74,31 +73,32 @@ def run(method=td, episodes=100, alpha=0.05, gamma=1.0):
     return V, error
 
 
-def batch_update(trajectory, method, gamma, errors, V):
-    trajectory.reverse()
-    target = 0
-    for state, next_state, reward in trajectory:
-        if method == mc:
-            target = reward + gamma * target
-        else:
-            target = reward + gamma * V[next_state] if next_state not in TERMINAL_STATE else reward
-        error = target - V[state]
-        errors[state].append(error)
-    return errors
+def batch_update(V, trajectories, method, alpha, gamma):
+    errors = defaultdict(list)
+    for trajectory in trajectories:
+        for i, (state, next_state, reward) in enumerate(trajectory):
+            if method == mc:
+                if i == 0:
+                    target = 0
+                target = reward + gamma * target
+            else:
+                target = reward + gamma * V[next_state] if next_state not in TERMINAL_STATE else reward
+            errors[state].append(target - V[state])
+    for state in errors.keys():
+        V[state] = V[state] + alpha * np.mean(errors[state])
+    return V
 
 
-def batch(episodes=100, alpha=0.05, gamma=1.0):
-    for method in [td, mc]:
+def batch(methods=(td, mc), episodes=100, alpha=0.05, gamma=1.0):
+    for method in methods:
         trajectories = []
         V = defaultdict(lambda: 0.5)
         for _ in range(episodes):
-            trajectories.append(run_episode())
-            errors = defaultdict(list)
-            for trajectory in trajectories:
-                errors = batch_update(trajectory, method, gamma, errors, V)
-            for state in errors.keys():
-                V[state] = V[state] + alpha * np.mean(errors[state])
-        print(f'error for method {method.__name__} = {round(rmse_error(V), 3)}')
+            trajectory = run_episode()
+            trajectory.reverse()
+            trajectories.append(trajectory)
+            V = batch_update(V, trajectories, method, alpha, gamma)
+        print(f'error for {method.__name__} = {round(rmse_error(V), 3)}')
         vals = [V[state] for state in STATES[1:6]]
         plt.plot(STATES[1:6], vals, label=f'{method.__name__}')
     true_vals = [TRUE_VALUE[state] for state in STATES[1:6]]
@@ -139,12 +139,14 @@ def plot_6_2_right():
 def simulate(method=td, n_episodes=100):
     n_episodes = n_episodes
     V, error = run(method, n_episodes)
-    print('error =', np.round(error, 3))
-    return error
+    print(f'error for {method.__name__} = {np.round(error, 3)}')
 
 
 if __name__ == '__main__':
-    # error = simulate()
+    simulate(method=td)
+    simulate(method=mc)
     # plot_6_2_left()
     # plot_6_2_right()
+    # batch(methods=(td,))
+    # batch(methods=(mc,))
     batch()
